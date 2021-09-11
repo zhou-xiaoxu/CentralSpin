@@ -42,12 +42,12 @@ sigma2 = np.array([qt.tensor([qt.qeye(2), qt.sigmax()]),
 init_spin1 = 1.0 * ket0 + 0.0 * ket1
 init_spin2 = 0.0 * ket0 + 1.0 * ket1
 init_state = qt.tensor([init_spin1, init_spin2])
-Ham = params['omega1'] * sigma1[2] + params['omega2'] * sigma2[2] + params['g'] * sigma1[2] * sigma2[2]
+Ham = params['omega1'] * sigma1[2] + params['omega2'] * sigma2[2] + params['g'] * sigma1[0] * sigma2[0]
 if params["option"] == 'U':
     cops = []
 elif params['option'] == 'D':
     cops = [sigma1[2] * np.sqrt(0.5 * params['gamma']), sigma2[2] * np.sqrt(0.5 * params['gamma'])]
-eops = [sigma1[2], qt.tensor([qt.sigmaz(), qt.sigmaz()])]
+eops = [sigma1[2], sigma2[2]]
 tlist = np.linspace(0, int(params['T']), int(params['step']+1))
 
 #evol = qt.sesolve(Ham, init_state, tlist, eops)  # yield expectation, Schroedinger eq.
