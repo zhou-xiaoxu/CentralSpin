@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """
+Main function of central spin model
 @author: Xiaoxu Zhou
-Latest update: 09/12/2021
+Latest update: 09/13/2021
 """
 
 import numpy as np
@@ -9,39 +10,7 @@ import qutip as qt
 
 import matplotlib.pyplot as plt
 
-def tensor_power(mat, n):
-    """
-    Calculate a matrix to the nth power
-    Args:
-        mat: a matrix
-        n: exponent
-    """
-    if n==0:
-        res = 1
-    elif n==1:
-        res = mat
-    elif isinstance(n, int):
-        res = mat
-        for _ in range(2, n+1):
-            res = qt.tensor([res, mat])
-    else:
-        print('Invalid value of the exponent')
-    return res
-
-def sigmazi(i, N):
-    """
-    Calculate ith spin in the environment interacting with itself
-    Args:
-        N: the number of spins in the environment
-    """
-    if i==1:
-        inter = qt.tensor([qt.sigmaz(), tensor_power(qt.qeye(2), N-1)])
-    elif i==N:
-        inter = qt.tensor([tensor_power(qt.qeye(2), N-1), qt.sigmaz()])
-    else:
-        inter = qt.tensor([tensor_power(qt.qeye(2), i-1), qt.sigmaz()])
-        inter = qt.tensor([inter, tensor_power(qt.qeye(2), N-i)])
-    return inter
+from utils.utils import tensor_power, sigmazi
 
 
 class CentralSpin(object):
@@ -62,14 +31,6 @@ class CentralSpin(object):
             self.cops = []
         elif self.params['option'] == 'D':
             self.cops = []  # to be completed
-        
-    def make_basis(self):
-        self.ket0 = qt.basis(2, 0)
-        self.ket1 = qt.basis(2, 1)
-        self.ket00 = qt.tensor([self.ket0, self.ket0])
-        self.ket01 = qt.tensor([self.ket0, self.ket1])
-        self.ket10 = qt.tensor([self.ket1, self.ket0])
-        self.ket11 = qt.tensor([self.ket1, self.ket1])
        
     def nmr(self):
         """
@@ -89,41 +50,89 @@ class CentralSpin(object):
 #        qt.Qobj(Ham_env)
         for i in range(1,self.N+1):
             Ham_env += 0.5 * self.omega[i] * sigmazi(i, self.N).data.reshape((dim_env,dim_env))
-        
         dim_int = np.power(2, self.N+1)
         Ham_int = qt.Qobj(np.zeros((dim_int, dim_int)))
         for i in range(1,self.N+1):
             Ham_int += 0.5 * self.lamb[i-1] * qt.tensor([qt.sigmaz(), sigmazi(i, self.N)]).data.reshape((dim_int,dim_int))
-        
         Ham = qt.tensor([0.5 * self.omega[0] * qt.sigmaz(), tensor_power(qt.qeye(2), self.N)]).data.reshape((dim_int,dim_int)) + \
               qt.tensor([qt.sigmaz(), Ham_env]).data.reshape((dim_int,dim_int)) + \
               Ham_int
         
         evol = qt.mesolve(Ham, rho_init, self.tlist, self.cops)
-        fid = [(np.trace(np.sqrt(np.sqrt(rho_init) * state * np.sqrt(rho_init))))**2 for state in evol.states]
+
+        # fidelity
+        ## fidelity as a whole
+        fid_whole = [(np.trace(np.sqrt(np.sqrt(rho_init) * state * np.sqrt(rho_init))))**2 for state in evol.states]
+        ## fidelity considering each environment spin
+        c_list = [qt.ptrace(state,0) for state in evol.states]
+#        ### N=2
+#        spin1_list = [qt.ptrace(state,1) for state in evol.states]
+#        spin2_list = [qt.ptrace(state,2) for state in evol.states]
+##        print(cs_t)
+#        fid_c = [(np.trace(np.sqrt(np.sqrt(c_init) * c * np.sqrt(c_init))))**2 for c in c_list]
+#        fid_spin1 = [(np.trace(np.sqrt(np.sqrt(c_init) * spin1 * np.sqrt(c_init))))**2 for spin1 in spin1_list]
+#        fid_spin2 = [(np.trace(np.sqrt(np.sqrt(c_init) * spin2 * np.sqrt(c_init))))**2 for spin2 in spin2_list]
+#        fid_each = np.array([fid_c, fid_spin1, fid_spin2])
+        ### N=3
+        spin1_list = [qt.ptrace(state,1) for state in evol.states]
+        spin2_list = [qt.ptrace(state,2) for state in evol.states]
+        spin3_list = [qt.ptrace(state,3) for state in evol.states]
+        fid_c = [(np.trace(np.sqrt(np.sqrt(c_init) * c * np.sqrt(c_init))))**2 for c in c_list]
+        fid_spin1 = [(np.trace(np.sqrt(np.sqrt(c_init) * spin1 * np.sqrt(c_init))))**2 for spin1 in spin1_list]
+        fid_spin2 = [(np.trace(np.sqrt(np.sqrt(c_init) * spin2 * np.sqrt(c_init))))**2 for spin2 in spin2_list]
+        fid_spin3 = [(np.trace(np.sqrt(np.sqrt(c_init) * spin3 * np.sqrt(c_init))))**2 for spin3 in spin3_list]
+        fid_each = np.array([fid_c, fid_spin1, fid_spin2, fid_spin3])
         
-        return fid
+        return fid_whole, fid_each
  
 params = dict()
 params = {
-          "N": 2,
-          "omega": [1.,1.,1.],
-          "lambda": [0.1,0.1],
-          "T": 10,
-          "step": 1e3,
+          "N": 3,
+          "omega": [1.,1.,1.,1.],
+          "lambda": [0.1,0.1,0.1],
+          "T": 1e2,
+          "step": 2e3,
           "option": 'U'
           }
 
 model = CentralSpin(params)
-fid = model.nmr()
-count = np.arange(0,len(fid),1)
+fid_whole, fid_each = model.nmr()
+count = np.arange(0,params['step']+1,1)
 
+# plot
+## whole fidelity
 plt.figure()
-l1, = plt.plot(count, fid)
+l1, = plt.plot(count, fid_whole)
 plt.xlabel(r'time steps')
 plt.ylabel(r'fidelity')
 plt.legend(handles=[l1, ], labels=['N=%d'%params['N']], loc='best')
 plt.title(r'Central spin model')
+
+## each bath spin's fidelity
+### N=2
+#plt.figure()
+#l1, = plt.plot(count, fid_each[0])
+#l2, = plt.plot(count, fid_each[1])
+#l3, = plt.plot(count, fid_each[2])
+#plt.xlabel(r'time steps')
+#plt.ylabel(r'fidelity')
+#plt.legend(handles=[l1, l2, l3, ], 
+#           labels=['central spin', 'bath spin 1', 'bath spin 2'], 
+#           loc='best')
+#plt.title(r'Central spin model, N=%d'%params['N'])
+
+### N=3
+plt.figure()
+l1, = plt.plot(count, fid_each[0])
+l2, = plt.plot(count, fid_each[1])
+l3, = plt.plot(count, fid_each[2])
+l4, = plt.plot(count, fid_each[3])
+plt.xlabel(r'time steps')
+plt.ylabel(r'fidelity')
+plt.legend(handles=[l1, l2, l3, l4, ], 
+           labels=['central spin', 'bath spin 1', 'bath spin 2', 'bath spin 3'], 
+           loc='best')
+plt.title(r'Central spin model, N=%d'%params['N'])
+
 plt.show()
 
-    
