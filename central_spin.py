@@ -68,7 +68,6 @@ class CentralSpin(object):
 #        ### N=2
 #        spin1_list = [qt.ptrace(state,1) for state in evol.states]
 #        spin2_list = [qt.ptrace(state,2) for state in evol.states]
-##        print(cs_t)
 #        fid_c = [(np.trace(np.sqrt(np.sqrt(c_init) * c * np.sqrt(c_init))))**2 for c in c_list]
 #        fid_spin1 = [(np.trace(np.sqrt(np.sqrt(c_init) * spin1 * np.sqrt(c_init))))**2 for spin1 in spin1_list]
 #        fid_spin2 = [(np.trace(np.sqrt(np.sqrt(c_init) * spin2 * np.sqrt(c_init))))**2 for spin2 in spin2_list]
