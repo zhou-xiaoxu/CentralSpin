@@ -55,17 +55,12 @@ def sigmazi(i, N):
     Args:
         N: the number of spins in the environment
     """
-#    print('i=',i)
     if i==1:
         inter = qt.tensor([qt.sigmaz(), tensor_power(qt.qeye(2), N-1)])
-#        print('check first inter:', inter)
     elif i==N:
         inter = qt.tensor([tensor_power(qt.qeye(2), N-1), qt.sigmaz()])
-#        print('check last inter:', inter)
     else:
         inter = qt.tensor([tensor_power(qt.qeye(2), i-1), qt.sigmaz()])
-#        print('check inter1:', inter)
         inter = qt.tensor([inter, tensor_power(qt.qeye(2), N-i)])
-#        print('check inter2:', inter)
     return inter
 
