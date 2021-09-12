@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 @author: Xiaoxu Zhou
-Latest update: 09/11/2021
+Latest update: 09/12/2021
 """
 
 import numpy as np
@@ -34,18 +34,13 @@ def sigmazi(i, N):
     Args:
         N: the number of spins in the environment
     """
-#    print('i=',i)
     if i==1:
         inter = qt.tensor([qt.sigmaz(), tensor_power(qt.qeye(2), N-1)])
-#        print('check first inter:', inter)
     elif i==N:
         inter = qt.tensor([tensor_power(qt.qeye(2), N-1), qt.sigmaz()])
-#        print('check last inter:', inter)
     else:
         inter = qt.tensor([tensor_power(qt.qeye(2), i-1), qt.sigmaz()])
-#        print('check inter1:', inter)
         inter = qt.tensor([inter, tensor_power(qt.qeye(2), N-i)])
-#        print('check inter2:', inter)
     return inter
 
 
@@ -88,50 +83,23 @@ class CentralSpin(object):
         c_init = (qt.qeye(2) + qt.sigmax()) / 2
         env_init = tensor_power(qt.qeye(2)/2, self.N)
         rho_init = qt.tensor([c_init, env_init])
-#        print('rho_init:',rho_init)
         
         dim_env = np.power(2, self.N)
         Ham_env = qt.Qobj(np.zeros((dim_env, dim_env)))
 #        qt.Qobj(Ham_env)
-#        print('check Ham_env init:', Ham_env)
         for i in range(1,self.N+1):
-#            print('i =',i)
-#            print('N =',self.N)
             Ham_env += 0.5 * self.omega[i] * sigmazi(i, self.N).data.reshape((dim_env,dim_env))
-#            print('check Ham_env:', Ham_env)
+        
         dim_int = np.power(2, self.N+1)
         Ham_int = qt.Qobj(np.zeros((dim_int, dim_int)))
         for i in range(1,self.N+1):
             Ham_int += 0.5 * self.lamb[i-1] * qt.tensor([qt.sigmaz(), sigmazi(i, self.N)]).data.reshape((dim_int,dim_int))
-#            print('check Ham_int:', Ham_int)
+        
         Ham = qt.tensor([0.5 * self.omega[0] * qt.sigmaz(), tensor_power(qt.qeye(2), self.N)]).data.reshape((dim_int,dim_int)) + \
               qt.tensor([qt.sigmaz(), Ham_env]).data.reshape((dim_int,dim_int)) + \
               Ham_int
-#        print(Ham.shape)
-#        print(rho_init.shape)
-        
-        
-#        dim_env = np.power(2, self.N)
-#        Ham_env = qt.qzero(dim_env)
-#        for i in range(1,self.N+1):
-#            Ham_env += 0.5 * self.omega[i] * sigmazi(i, self.N)
-#        dim_int = np.power(2, self.N+1)
-#        Ham_int = qt.qzero(dim_int)
-#        for i in range(1,self.N+1):
-#            Ham_int += 0.5 * self.lamb[i-1] * qt.tensor([qt.sigmaz(), sigmazi(i, self.N)])
-#        Ham = qt.tensor([0.5 * self.omega[0] * qt.sigmaz(), tensor_power(qt.qeye(2), self.N)]).data.reshape((dim_int,dim_int)) + \
-#              qt.tensor([qt.sigmaz(), Ham_env]).data.reshape((dim_int,dim_int)) + \
-#              Ham_int
         
         evol = qt.mesolve(Ham, rho_init, self.tlist, self.cops)
-#        print(evol.states[0].shape)
-#        print(rho_init.shape)
-#        print(rho_init.type)
-#        fid = rho_init.dag() * evol.states
-#        print(fid)
-#        fid = np.trace(c_init * evol.states) + 2 * np.sqrt(np.linalg.det(c_init) * np.linalg.det(evol.states))
-#        fid = rho_init.dag() * evol.states + 2 * np.sqrt(np.linalg.det(rho_init) * np.linalg.det(evol.states))
-        
         fid = [(np.trace(np.sqrt(np.sqrt(rho_init) * state * np.sqrt(rho_init))))**2 for state in evol.states]
         
         return fid

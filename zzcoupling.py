@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 @author: Xiaoxu Zhou
-Latest update: 09/08/2021
+Latest update: 09/12/2021
 """
 
 import numpy as np
@@ -49,10 +49,6 @@ plt.title(r'Gaussian drive pulse')
 # basis vectors
 ket0 = qt.basis(2, 0)
 ket1 = qt.basis(2, 1)
-#ket00 = qt.tensor([ket0, ket0])
-#ket01 = qt.tensor([ket0, ket1])
-#ket10 = qt.tensor([ket1, ket0])
-#ket11 = qt.tensor([ket1, ket1])
 
 # Pauli matrices
 sigma1 = np.array([qt.tensor([qt.sigmax(), qt.qeye(2)]), 
