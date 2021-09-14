@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-Main function of central spin model
 @author: Xiaoxu Zhou
-Latest update: 09/13/2021
+Latest update: 09/14/2021
 """
 
 import numpy as np
@@ -50,16 +49,18 @@ class CentralSpin(object):
 #        qt.Qobj(Ham_env)
         for i in range(1,self.N+1):
             Ham_env += 0.5 * self.omega[i] * sigmazi(i, self.N).data.reshape((dim_env,dim_env))
+        
         dim_int = np.power(2, self.N+1)
         Ham_int = qt.Qobj(np.zeros((dim_int, dim_int)))
         for i in range(1,self.N+1):
             Ham_int += 0.5 * self.lamb[i-1] * qt.tensor([qt.sigmaz(), sigmazi(i, self.N)]).data.reshape((dim_int,dim_int))
+
         Ham = qt.tensor([0.5 * self.omega[0] * qt.sigmaz(), tensor_power(qt.qeye(2), self.N)]).data.reshape((dim_int,dim_int)) + \
               qt.tensor([qt.sigmaz(), Ham_env]).data.reshape((dim_int,dim_int)) + \
               Ham_int
         
         evol = qt.mesolve(Ham, rho_init, self.tlist, self.cops)
-
+        
         # fidelity
         ## fidelity as a whole
         fid_whole = [(np.trace(np.sqrt(np.sqrt(rho_init) * state * np.sqrt(rho_init))))**2 for state in evol.states]
@@ -68,18 +69,18 @@ class CentralSpin(object):
 #        ### N=2
 #        spin1_list = [qt.ptrace(state,1) for state in evol.states]
 #        spin2_list = [qt.ptrace(state,2) for state in evol.states]
-#        fid_c = [(np.trace(np.sqrt(np.sqrt(c_init) * c * np.sqrt(c_init))))**2 for c in c_list]
-#        fid_spin1 = [(np.trace(np.sqrt(np.sqrt(c_init) * spin1 * np.sqrt(c_init))))**2 for spin1 in spin1_list]
-#        fid_spin2 = [(np.trace(np.sqrt(np.sqrt(c_init) * spin2 * np.sqrt(c_init))))**2 for spin2 in spin2_list]
+#        fid_c = [np.trace(c * c_init) + 2 * np.sqrt(np.linalg.det(c) * np.linalg.det(c_init)) for c in c_list]
+#        fid_spin1 = [np.trace(spin1 * c_init) + 2 * np.sqrt(np.linalg.det(spin1) * np.linalg.det(c_init)) for spin1 in spin1_list]
+#        fid_spin2 = [np.trace(spin2 * c_init) + 2 * np.sqrt(np.linalg.det(spin2) * np.linalg.det(c_init)) for spin2 in spin2_list]
 #        fid_each = np.array([fid_c, fid_spin1, fid_spin2])
         ### N=3
         spin1_list = [qt.ptrace(state,1) for state in evol.states]
         spin2_list = [qt.ptrace(state,2) for state in evol.states]
         spin3_list = [qt.ptrace(state,3) for state in evol.states]
-        fid_c = [(np.trace(np.sqrt(np.sqrt(c_init) * c * np.sqrt(c_init))))**2 for c in c_list]
-        fid_spin1 = [(np.trace(np.sqrt(np.sqrt(c_init) * spin1 * np.sqrt(c_init))))**2 for spin1 in spin1_list]
-        fid_spin2 = [(np.trace(np.sqrt(np.sqrt(c_init) * spin2 * np.sqrt(c_init))))**2 for spin2 in spin2_list]
-        fid_spin3 = [(np.trace(np.sqrt(np.sqrt(c_init) * spin3 * np.sqrt(c_init))))**2 for spin3 in spin3_list]
+        fid_c = [np.trace(c * c_init) + 2 * np.sqrt(np.linalg.det(c) * np.linalg.det(c_init)) for c in c_list]
+        fid_spin1 = [np.trace(spin1 * c_init) + 2 * np.sqrt(np.linalg.det(spin1) * np.linalg.det(c_init)) for spin1 in spin1_list]
+        fid_spin2 = [np.trace(spin2 * c_init) + 2 * np.sqrt(np.linalg.det(spin2) * np.linalg.det(c_init)) for spin2 in spin2_list]
+        fid_spin3 = [np.trace(spin3 * c_init) + 2 * np.sqrt(np.linalg.det(spin3) * np.linalg.det(c_init)) for spin3 in spin3_list]
         fid_each = np.array([fid_c, fid_spin1, fid_spin2, fid_spin3])
         
         return fid_whole, fid_each
@@ -96,6 +97,7 @@ params = {
 
 model = CentralSpin(params)
 fid_whole, fid_each = model.nmr()
+#count = np.arange(0,len(fid_whole),1)
 count = np.arange(0,params['step']+1,1)
 
 # plot
