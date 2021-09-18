@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 @author: Xiaoxu Zhou
-Latest update: 09/14/2021
+Latest update: 09/18/2021
 """
 
 import numpy as np
@@ -9,131 +9,146 @@ import qutip as qt
 
 import matplotlib.pyplot as plt
 
-from utils.utils import tensor_power, sigmazi
+from utils.utils import tensor_power, sigmaxi, sigmayi, sigmazi
 
 
 class CentralSpin(object):
     """
     Central spin model
+    Index 0 is for central spin, index 1 to N are for the 1st to the Nth
+    environment spin respectively
     """
-    def __init__(self, params):
+    def __init__(self, params, c_init, env_init):
         self.params = params
         self.N = int(params['N'])
         self.omega = params['omega']
         self.lamb = params['lambda']
         
         self.T = int(params['T'])
-        self.step = int(params['step'])
-        self.tlist = np.linspace(0, self.T, self.step+1)
+        self.dt = int(params['dt'])
+        self.tlist = np.arange(0,params['T']+params['dt'],params['dt'])
         
         if self.params["option"] == 'U':
             self.cops = []
         elif self.params['option'] == 'D':
-            self.cops = []  # to be completed
+            self.cops = []  # TBC. This project doesn't take 'D' into considerations.
+        
+        self.c_init = c_init
+        self.s_tar = c_init  # target state
+        self.rho_init = qt.tensor([c_init, env_init])
        
-    def nmr(self):
+    def evolve(self):
         """
+        Calculate the evolution of a quantum system
         Args:
+            c_init: initial central spin state
+            env_init: initial environment state
+        Paras:
             N: the number of spins in the environment
             omega: the list of Larmor frequencies in NMR system; the first is
             for central spin, others are for env spins respectively
             lamb: the list of coupling strengths between central and env spin
             cops: collapse operator
         """
-        c_init = (qt.qeye(2) + qt.sigmax()) / 2
-        env_init = tensor_power(qt.qeye(2)/2, self.N)
-        rho_init = qt.tensor([c_init, env_init])
-        
+        # environment term in Hamiltonian
         dim_env = np.power(2, self.N)
         Ham_env = qt.Qobj(np.zeros((dim_env, dim_env)))
 #        qt.Qobj(Ham_env)
         for i in range(1,self.N+1):
             Ham_env += 0.5 * self.omega[i] * sigmazi(i, self.N).data.reshape((dim_env,dim_env))
-        
+        # interaction term in Hamiltonian
         dim_int = np.power(2, self.N+1)
         Ham_int = qt.Qobj(np.zeros((dim_int, dim_int)))
         for i in range(1,self.N+1):
-            Ham_int += 0.5 * self.lamb[i-1] * qt.tensor([qt.sigmaz(), sigmazi(i, self.N)]).data.reshape((dim_int,dim_int))
-
+            Ham_int += 0.5 * self.lamb[i-1] * \
+                       (qt.tensor([qt.sigmax(), sigmaxi(i, self.N)]) + \
+                        qt.tensor([qt.sigmay(), sigmayi(i, self.N)])).data.reshape((dim_int,dim_int))
+        # total Hamiltonian in interaction picture
         Ham = qt.tensor([0.5 * self.omega[0] * qt.sigmaz(), tensor_power(qt.qeye(2), self.N)]).data.reshape((dim_int,dim_int)) + \
-              qt.tensor([qt.sigmaz(), Ham_env]).data.reshape((dim_int,dim_int)) + \
+              qt.tensor([qt.qeye(2), Ham_env]).data.reshape((dim_int,dim_int)) + \
               Ham_int
         
-        evol = qt.mesolve(Ham, rho_init, self.tlist, self.cops)
+        # evolve
+        evol = qt.mesolve(Ham, self.rho_init, self.tlist, self.cops)
+        state_list = []
+#        self.state_list.append([qt.ptrace(s,0) for s in self.evol.states])  # s=state
+        for i in range(0,self.N+1):
+            state_list.append([[qt.ptrace(s,i)] for s in evol.states])
         
-        # fidelity
-        ## fidelity as a whole
-        fid_whole = [(np.trace(np.sqrt(np.sqrt(rho_init) * state * np.sqrt(rho_init))))**2 for state in evol.states]
-        ## fidelity considering each environment spin
-        c_list = [qt.ptrace(state,0) for state in evol.states]
-#        ### N=2
-#        spin1_list = [qt.ptrace(state,1) for state in evol.states]
-#        spin2_list = [qt.ptrace(state,2) for state in evol.states]
-#        fid_c = [np.trace(c * c_init) + 2 * np.sqrt(np.linalg.det(c) * np.linalg.det(c_init)) for c in c_list]
-#        fid_spin1 = [np.trace(spin1 * c_init) + 2 * np.sqrt(np.linalg.det(spin1) * np.linalg.det(c_init)) for spin1 in spin1_list]
-#        fid_spin2 = [np.trace(spin2 * c_init) + 2 * np.sqrt(np.linalg.det(spin2) * np.linalg.det(c_init)) for spin2 in spin2_list]
-#        fid_each = np.array([fid_c, fid_spin1, fid_spin2])
-        ### N=3
-        spin1_list = [qt.ptrace(state,1) for state in evol.states]
-        spin2_list = [qt.ptrace(state,2) for state in evol.states]
-        spin3_list = [qt.ptrace(state,3) for state in evol.states]
-        fid_c = [np.trace(c * c_init) + 2 * np.sqrt(np.linalg.det(c) * np.linalg.det(c_init)) for c in c_list]
-        fid_spin1 = [np.trace(spin1 * c_init) + 2 * np.sqrt(np.linalg.det(spin1) * np.linalg.det(c_init)) for spin1 in spin1_list]
-        fid_spin2 = [np.trace(spin2 * c_init) + 2 * np.sqrt(np.linalg.det(spin2) * np.linalg.det(c_init)) for spin2 in spin2_list]
-        fid_spin3 = [np.trace(spin3 * c_init) + 2 * np.sqrt(np.linalg.det(spin3) * np.linalg.det(c_init)) for spin3 in spin3_list]
-        fid_each = np.array([fid_c, fid_spin1, fid_spin2, fid_spin3])
+        return evol.states, state_list
         
-        return fid_whole, fid_each
- 
+    def fid(self, state_list):
+        """
+        Calculate fidelity
+        """
+        fid = []
+        for i in range(0,self.N+1):
+            fid.append([np.trace(s[0] * self.s_tar) + 2 * np.sqrt(np.linalg.det(s[0]) * np.linalg.det(self.s_tar)) for s in state_list[i]])
+        return fid
+    
+    def expect(self, state_list):
+        """
+        Calculate expectation of observable sigma_x, sigma_y, sigma_z
+        """
+        exp_x = []
+        exp_y = []
+        exp_z = []
+        for i in range(0,self.N+1):
+            exp_x.append([qt.expect(qt.sigmax(), [s[0] for s in state_list[i]])])
+            exp_y.append([qt.expect(qt.sigmay(), [s[0] for s in state_list[i]])])
+            exp_z.append([qt.expect(qt.sigmaz(), [s[0] for s in state_list[i]])])
+        return exp_x, exp_y, exp_z
+
+
 params = dict()
 params = {
-          "N": 3,
-          "omega": [1.,1.,1.,1.],
-          "lambda": [0.1,0.1,0.1],
+          "N": 1,
+          "omega": [1.,1.,1.,1.,1.,1.,1.,1.],
+          "lambda": [0.1,0.1,0.1,0.1,0.1,0.1,0.1],
           "T": 1e2,
-          "step": 2e3,
+          "dt":1e-2,
           "option": 'U'
           }
 
-model = CentralSpin(params)
-fid_whole, fid_each = model.nmr()
-#count = np.arange(0,len(fid_whole),1)
-count = np.arange(0,params['step']+1,1)
+c_init = qt.ket2dm(qt.basis(2,0))
+env_init = tensor_power(qt.ket2dm(qt.basis(2,1)), params['N'])
+model = CentralSpin(params, c_init, env_init)
+states, state_list = model.evolve()
+fid = model.fid(state_list)
+exp_x, exp_y, exp_z = model.expect(state_list)
 
-# plot
-## whole fidelity
-plt.figure()
-l1, = plt.plot(count, fid_whole)
-plt.xlabel(r'time steps')
-plt.ylabel(r'fidelity')
-plt.legend(handles=[l1, ], labels=['N=%d'%params['N']], loc='best')
-plt.title(r'Central spin model')
+count = model.tlist
 
-## each bath spin's fidelity
-### N=2
-#plt.figure()
-#l1, = plt.plot(count, fid_each[0])
-#l2, = plt.plot(count, fid_each[1])
-#l3, = plt.plot(count, fid_each[2])
-#plt.xlabel(r'time steps')
-#plt.ylabel(r'fidelity')
-#plt.legend(handles=[l1, l2, l3, ], 
-#           labels=['central spin', 'bath spin 1', 'bath spin 2'], 
-#           loc='best')
-#plt.title(r'Central spin model, N=%d'%params['N'])
+# plot fidelity
+fig, ax = plt.subplots(figsize=(8,6))
+ax.plot(count, fid[0], label='central spin')
+#for i in range(1,int(params['N'])+1):
+#    ax.plot(count, fid[i], label='bath spin %d'%i)
+ax.plot(count, fid[1], label='bath spin')
+ax.legend(fontsize=9)
+ax.set_xlabel('t', fontsize=12)
+ax.set_ylabel('fidelity', fontsize=12)
+ax.set_title(r'$F$-t, N=%d'%params['N'], fontsize=16)
 
-### N=3
-plt.figure()
-l1, = plt.plot(count, fid_each[0])
-l2, = plt.plot(count, fid_each[1])
-l3, = plt.plot(count, fid_each[2])
-l4, = plt.plot(count, fid_each[3])
-plt.xlabel(r'time steps')
-plt.ylabel(r'fidelity')
-plt.legend(handles=[l1, l2, l3, l4, ], 
-           labels=['central spin', 'bath spin 1', 'bath spin 2', 'bath spin 3'], 
-           loc='best')
-plt.title(r'Central spin model, N=%d'%params['N'])
+# plot expectation
+fig, ax = plt.subplots(figsize=(8,6))
+### sigmax
+#ax.plot(count, exp_x[0][0], label=r'$\langle \sigma_x \rangle$ on central spin')
+#for i in range(1,int(params['N']+1)):
+#    ax.plot(count, exp_x[i][0].T, label=r'$\langle \sigma_x \rangle$ on bath spin %d'%i)
+### sigmay
+#ax.plot(count, exp_y[0][0], label=r'$\langle \sigma_y \rangle$ on central spin')
+#for i in range(1,int(params['N']+1)):
+#    ax.plot(count, exp_y[i][0], label=r'$\langle \sigma_y \rangle$ on bath spin %d'%i)
+ax.plot(count, exp_x[0][0], label=r'$\langle \sigma_x \rangle, \langle \sigma_y \rangle$ on each spin')
+# sigmaz
+ax.plot(count, exp_z[0][0], label=r'$\langle \sigma_z \rangle$ on central spin')
+#for i in range(1,int(params['N']+1)):
+#    ax.plot(count, exp_z[i][0], label=r'$\langle \sigma_z \rangle$ on bath spin %d'%i)
+ax.plot(count, exp_z[1][0], label=r'$\langle \sigma_z \rangle$ on each bath spin')
 
-plt.show()
+ax.legend(fontsize=9)
+ax.set_xlabel('t', fontsize=12)
+ax.set_ylabel(r'$\langle \sigma_i \rangle$', fontsize=12)
+ax.set_title(r'$\langle \sigma_i \rangle$-t, N=%d'%params['N'], fontsize=16)
 

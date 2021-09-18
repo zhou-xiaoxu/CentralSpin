@@ -2,7 +2,7 @@
 """
 Useful functions for central-spin problem
 @author: Xiaoxu Zhou
-Latest Update: 09/13/2021
+Latest update: 09/18/2021
 """
 
 import numpy as np
@@ -49,18 +49,54 @@ def tensor_power(mat, n):
         print('Invalid value of the exponent')
     return res
 
-def sigmazi(i, N):
+def sigmaxi(i, N):
     """
-    Calculate ith spin in the environment interacting with itself
+    Calculate sigma_x operator acting on the ith spin in the environment
     Args:
         N: the number of spins in the environment
     """
-    if i==1:
-        inter = qt.tensor([qt.sigmaz(), tensor_power(qt.qeye(2), N-1)])
+    if i==1 and N==1:
+        res = qt.sigmax()
+    elif i==1:
+        res = qt.tensor([qt.sigmax(), tensor_power(qt.qeye(2), N-1)])
     elif i==N:
-        inter = qt.tensor([tensor_power(qt.qeye(2), N-1), qt.sigmaz()])
+        res = qt.tensor([tensor_power(qt.qeye(2), N-1), qt.sigmax()])
     else:
-        inter = qt.tensor([tensor_power(qt.qeye(2), i-1), qt.sigmaz()])
-        inter = qt.tensor([inter, tensor_power(qt.qeye(2), N-i)])
-    return inter
+        res1 = qt.tensor([tensor_power(qt.qeye(2), i-1), qt.sigmax()])
+        res = qt.tensor([res1, tensor_power(qt.qeye(2), N-i)])
+    return res
+
+def sigmayi(i, N):
+    """
+    Calculate sigma_y operator acting on the ith spin in the environment
+    Args:
+        N: the number of spins in the environment
+    """
+    if i==1 and N==1:
+        res = qt.sigmay()
+    elif i==1:
+        res = qt.tensor([qt.sigmay(), tensor_power(qt.qeye(2), N-1)])
+    elif i==N:
+        res = qt.tensor([tensor_power(qt.qeye(2), N-1), qt.sigmay()])
+    else:
+        res1 = qt.tensor([tensor_power(qt.qeye(2), i-1), qt.sigmay()])
+        res = qt.tensor([res1, tensor_power(qt.qeye(2), N-i)])
+    return res
+
+def sigmazi(i, N):
+    """
+    Calculate sigma_z operator acting on the ith spin in the environment
+    Args:
+        N: the number of spins in the environment
+    """
+    if i==1 and N==1:
+        res = qt.sigmaz()
+    elif i==1:
+        res = qt.tensor([qt.sigmaz(), tensor_power(qt.qeye(2), N-1)])
+    elif i==N:
+        res = qt.tensor([tensor_power(qt.qeye(2), N-1), qt.sigmaz()])
+    else:
+        res1 = qt.tensor([tensor_power(qt.qeye(2), i-1), qt.sigmaz()])
+        res = qt.tensor([res1, tensor_power(qt.qeye(2), N-i)])
+    return res
 
