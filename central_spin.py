@@ -71,9 +71,8 @@ class CentralSpin(object):
         # evolve
         evol = qt.mesolve(Ham, self.rho_init, self.tlist, self.cops)
         state_list = []
-#        self.state_list.append([qt.ptrace(s,0) for s in self.evol.states])  # s=state
         for i in range(0,self.N+1):
-            state_list.append([[qt.ptrace(s,i)] for s in evol.states])
+            state_list.append([[qt.ptrace(s,i)] for s in evol.states])  # s=state
         
         return evol.states, state_list
         

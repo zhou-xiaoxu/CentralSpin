@@ -22,16 +22,11 @@ params = {
           "dt":1e-2,
           "option": 'U'
           }
-#tlist = np.linspace(0, params['T'], int(params['step']+1))
 tlist = np.arange(0, params['T']+params['dt'], params['dt'])
 
 # basis vectors
 ket0 = qt.basis(2, 0)
 ket1 = qt.basis(2, 1)
-#ket00 = qt.tensor([ket0, ket0])
-#ket01 = qt.tensor([ket0, ket1])
-#ket10 = qt.tensor([ket1, ket0])
-#ket11 = qt.tensor([ket1, ket1])
 
 # Pauli matrices
 sigma1 = np.array([qt.tensor([qt.sigmax(), qt.qeye(2)]), 

@@ -70,7 +70,7 @@ init_state = qt.tensor([init_spin1, init_spin2])
 
 Ham_0 = params['omega1'] * sigma1[2] + params['omega2'] * sigma2[2] + params['g'] * sigma1[2] * sigma2[2]
 Ham_d = [(qt.tensor([qt.sigmaz(), a + a.dag()])) * pulse(t, params['pulse']) for t in tlist]
-Ham = [Ham_0 + Ham_di for Ham_di in Ham_d]
+Ham = [Ham_0 + Ham_di for Ham_di in Ham_d]  # with control
 #Ham = Ham_0  # without control
 
 if params["option"] == 'U':
