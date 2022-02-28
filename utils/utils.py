@@ -45,6 +45,7 @@ def tensor_power(mat, n):
         res = mat
         for _ in range(2, n+1):
             res = qt.tensor([res, mat])
+#            print("res:", res)
     else:
         print('Invalid value of the exponent')
     return res
@@ -99,4 +100,15 @@ def sigmazi(i, N):
         res1 = qt.tensor([tensor_power(qt.qeye(2), i-1), qt.sigmaz()])
         res = qt.tensor([res1, tensor_power(qt.qeye(2), N-i)])
     return res
+
+def qtrace(mat):
+    """
+    Calculate the trace of a 2*2 matrix in Qobj
+    Args:
+        mat: matrix to be calculated
+    """
+    tr11 = mat[0][0][0][0]
+    tr22 = mat[0][1][0][1]
+    tr = tr11 + tr22
+    return tr
 
