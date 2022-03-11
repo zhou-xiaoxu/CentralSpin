@@ -112,11 +112,11 @@ class CentralSpin(object):
 params = dict()
 params = {
           "N": 2,
-          "omega": [2*np.pi*1e2,3/(2*np.pi*8),4/(2*np.pi*8),0.3,0.4,0.5,0.6,0.7],
-          "A": [1/(2*np.pi*8),1/(2*np.pi*10),0.14,0.16,0.18,0.1,0.1],
+          "omega": [1e6,1e6,1e6,0.4,0.5,0.6,0.7],
+          "A": [1e6,1.2*1e6,0.14,0.16,0.18,0.1,0.1],
           "Bac": 1,
-          "T": 10,
-          "dt": 1e-2,
+          "T": 1e-6,
+          "dt": 1e-8,
           "option": 'U'
           }
 
@@ -132,9 +132,8 @@ count = model.tlist
 # plot fidelity
 fig, ax = plt.subplots(figsize=(8,6))
 ax.plot(count, fid[0], label='central spin')
-#for i in range(1,int(params['N'])+1):
-#    ax.plot(count, fid[i], label='bath spin %d'%i)
-#ax.plot(count, fid[1], label='bath spin')
+for i in range(1,int(params['N'])+1):
+    ax.plot(count, fid[i], label='bath spin %d'%i)
 ax.legend(fontsize=16)
 ax.set_xlabel('t', fontsize=16)
 ax.set_ylabel('fidelity', fontsize=16)
