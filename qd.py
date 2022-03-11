@@ -111,9 +111,9 @@ class CentralSpin(object):
 
 params = dict()
 params = {
-          "N": 2,
-          "omega": [1e6,1e6,1e6,0.4,0.5,0.6,0.7],
-          "A": [1e6,1.2*1e6,0.14,0.16,0.18,0.1,0.1],
+          "N": 3,
+          "omega": [1e6,1e6,1e4,1e4,0.5,0.6,0.7],
+          "A": [1.6*1e6,1.3*1e6,1e6,0.16,0.18,0.1,0.1],
           "Bac": 1,
           "T": 1e-6,
           "dt": 1e-8,
@@ -125,7 +125,7 @@ env_init = tensor_power(qt.ket2dm(qt.basis(2, 1)), params['N'])  # alternative
 model = CentralSpin(params, c_init, env_init)
 states, state_list = model.evolve()
 fid = model.fid(state_list)
-#exp_x, exp_y, exp_z = model.expect(state_list)
+exp_x, exp_y, exp_z = model.expect(state_list)
 
 count = model.tlist
 
@@ -140,7 +140,7 @@ ax.set_ylabel('fidelity', fontsize=16)
 ax.set_title(r'$F$-t, N=%d'%params['N'], fontsize=18)
 
 # plot expectation
-#fig, ax = plt.subplots(figsize=(8,6))
+fig, ax = plt.subplots(figsize=(8,6))
 # sigmax
 #ax.plot(count, exp_x[0][0], label=r'$\langle \sigma_x \rangle$ on central spin')
 #for i in range(1,int(params['N']+1)):
@@ -151,15 +151,15 @@ ax.set_title(r'$F$-t, N=%d'%params['N'], fontsize=18)
 #    ax.plot(count, exp_y[i][0], label=r'$\langle \sigma_y \rangle$ on bath spin %d'%i)
 #ax.plot(count, exp_x[0][0], label=r'$\langle \sigma_x \rangle, \langle \sigma_y \rangle$ on each spin')
 # sigmaz
-#ax.plot(count, exp_z[0][0], label=r'$\langle \sigma_z \rangle$ on central spin')
-#for i in range(1,int(params['N']+1)):
-#    ax.plot(count, exp_z[i][0], label=r'$\langle \sigma_z \rangle$ on bath spin %d'%i)
-#ax.plot(count, exp_z[1][0], label=r'$\langle \sigma_z \rangle$ on each bath spin')
+ax.plot(count, exp_z[0][0], label=r'$\langle \sigma_z \rangle$ on central spin')
+for i in range(1,int(params['N']+1)):
+    ax.plot(count, exp_z[i][0], label=r'$\langle \sigma_z \rangle$ on bath spin %d'%i)
+ax.plot(count, exp_z[1][0], label=r'$\langle \sigma_z \rangle$ on each bath spin')
 
-#ax.legend(fontsize=9)
-#ax.set_xlabel('t', fontsize=12)
-#ax.set_ylabel(r'$\langle \sigma_i \rangle$', fontsize=12)
-#ax.set_title(r'$\langle \sigma_i \rangle$-t, N=%d'%params['N'], fontsize=16)
+ax.legend(fontsize=9)
+ax.set_xlabel('t', fontsize=12)
+ax.set_ylabel(r'$\langle \sigma_i \rangle$', fontsize=12)
+ax.set_title(r'$\langle \sigma_i \rangle$-t, N=%d'%params['N'], fontsize=16)
 
 
 #plt.figure(figsize=(8,6))
