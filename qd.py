@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 @author: Xiaoxu Zhou
-Latest update: 03/01/2022
+Latest update: 03/02/2022
 """
 
 import numpy as np
@@ -9,6 +9,7 @@ import qutip as qt
 
 import matplotlib.pyplot as plt
 
+#from utils.nuclei import tensor_power, Ixi, Iyi, Izi, qtrace2, qtrace4
 from utils.utils import tensor_power, sigmaxi, sigmayi, sigmazi, qtrace
 
 
@@ -22,7 +23,8 @@ class CentralSpin(object):
         self.params = params
         self.N = int(params['N'])
         self.omega = params['omega']
-        self.lamb = params['lambda']
+        self.A = params['A']
+        self.Bac = params['Bac']
         
         self.T = int(params['T'])
         self.dt = int(params['dt'])
@@ -33,17 +35,17 @@ class CentralSpin(object):
         elif self.params['option'] == 'D':
             self.cops = []  # TBC. This project doesn't take 'D' into considerations.
         
-        self.dim = np.power(2, self.N+1)
         self.c_init = c_init
+#        print("c_init:", c_init)
         self.env_init = env_init
-        self.s_tar = c_init  # target state
+        self.c_tar = c_init  # target electron spin state
+#        self.env_tar = qt.ket2dm(qt.basis(4, 3)) # target env spin state
+        self.env_tar = c_init
         self.rho_init = qt.tensor([self.c_init, self.env_init])
-        print("rho_init:", self.rho_init)
-        print("self.dim:", self.dim)
        
     def evolve(self):
         """
-        Calculate the evolution of a quantum system
+        Calculate the free evolution of a quantum system
         Args:
             c_init: initial central spin state
             env_init: initial environment state
@@ -51,36 +53,35 @@ class CentralSpin(object):
             N: the number of spins in the environment
             omega: the list of Larmor frequencies in NMR system; the first is
             for central spin, others are for env spins respectively
-            lamb: the list of coupling strengths between central and env spin
+            A: the list of coupling strengths between central and env spin
             cops: collapse operator
         """
+        # electron term in Hamiltonian
+        Ham_e = self.omega[0] * qt.tensor([qt.sigmaz(), tensor_power(qt.qeye(2), self.N)])
+
         # environment term in Hamiltonian
-        basis = qt.ket2dm(qt.Qobj(np.zeros((2, 1))))
-        Ham_env = tensor_power(basis, self.N)
-        print("Ham_env_init:", Ham_env)
+        zero = qt.ket2dm(qt.Qobj(np.zeros((2, 1))))
+        Ham_env = tensor_power(zero, self.N)
         for i in range(1,self.N+1):
-            Ham_env += 0.5 * self.omega[i] * sigmazi(i, self.N)
-        print("Ham_env:", Ham_env)
+            Ham_env += self.omega[i] * sigmazi(i, self.N)
+        Ham_env = qt.tensor([qt.qeye(2), Ham_env])
+        
         # interaction term in Hamiltonian
-        Ham_int = tensor_power(basis, self.N+1)
+        Ham_int = qt.tensor([qt.Qobj(np.zeros((2, 2))), tensor_power(zero, self.N)])
         for i in range(1,self.N+1):
-            Ham_int += 0.5 * self.lamb[i-1] * \
+            Ham_int += self.A[i-1] * \
                        (qt.tensor([qt.sigmax(), sigmaxi(i, self.N)]) + \
-                        qt.tensor([qt.sigmay(), sigmayi(i, self.N)]))
-        print("Ham_int:", Ham_int)
+                        qt.tensor([qt.sigmay(), sigmayi(i, self.N)]) + \
+                        qt.tensor([qt.sigmaz(), sigmazi(i, self.N)]))
+        
         # total Hamiltonian in interaction picture
-        Ham = qt.tensor([0.5 * self.omega[0] * qt.sigmaz(), tensor_power(qt.qeye(2), self.N)]) + \
-              qt.tensor([qt.qeye(2), Ham_env]) + \
-              Ham_int
-#        Ham = Ham_int
-        print("Ham:", Ham)
+        Ham = Ham_e + Ham_env + Ham_int
         
         # evolve
         evol = qt.mesolve(Ham, self.rho_init, self.tlist, self.cops, [])
         state_list = []
         for i in range(0,self.N+1):
             state_list.append([[qt.ptrace(s,i)] for s in evol.states])  # s=state
-#        print(state_list)
         
         return evol.states, state_list
         
@@ -89,8 +90,9 @@ class CentralSpin(object):
         Calculate fidelity
         """        
         fid = []
-        for i in range(0,self.N+1):
-            fid.append([qtrace(s * self.s_tar) + 2 * np.sqrt(np.linalg.det(s) * np.linalg.det(self.s_tar)) for s in state_list[i]])
+        fid.append([qtrace(s * self.c_tar) + 2 * np.sqrt(np.linalg.det(s) * np.linalg.det(self.c_tar)) for s in state_list[0]])
+        for i in range(1,self.N+1):
+            fid.append([qtrace(s * self.env_tar) + 2 * np.sqrt(np.linalg.det(s) * np.linalg.det(self.env_tar)) for s in state_list[i]])
         return fid
     
     def expect(self, state_list):
@@ -109,38 +111,34 @@ class CentralSpin(object):
 
 params = dict()
 params = {
-          "N": 5,
-          "omega": [10,0.1,0.1,0.1,0.1,0.1,1.,1.],
-          "lambda": [0.1,0.12,0.14,0.16,0.18,0.1,0.1],
-          "T": 2,
-          "dt": 1e-3,
+          "N": 2,
+          "omega": [2*np.pi*1e2,3/(2*np.pi*8),4/(2*np.pi*8),0.3,0.4,0.5,0.6,0.7],
+          "A": [1/(2*np.pi*8),1/(2*np.pi*10),0.14,0.16,0.18,0.1,0.1],
+          "Bac": 1,
+          "T": 10,
+          "dt": 1e-2,
           "option": 'U'
           }
 
-c_init = qt.ket2dm(qt.basis(2,0))
-#c_init = qt.basis(2,0)
-print("c_init:", c_init)
-env_init = tensor_power(qt.ket2dm(qt.basis(2,1)), params['N'])  # alternative
-#env_init = tensor_power(qt.basis(2,1), params['N'])
-print("env_init:", env_init)
+c_init = qt.ket2dm(qt.basis(2, 0))
+env_init = tensor_power(qt.ket2dm(qt.basis(2, 1)), params['N'])  # alternative
 model = CentralSpin(params, c_init, env_init)
 states, state_list = model.evolve()
-print(("states:"), len(states))
 fid = model.fid(state_list)
-exp_x, exp_y, exp_z = model.expect(state_list)
+#exp_x, exp_y, exp_z = model.expect(state_list)
 
 count = model.tlist
 
 # plot fidelity
 fig, ax = plt.subplots(figsize=(8,6))
-#ax.plot(count, fid[0], label='central spin')
-for i in range(1,int(params['N'])+1):
-    ax.plot(count, fid[i], label='bath spin %d'%i)
+ax.plot(count, fid[0], label='central spin')
+#for i in range(1,int(params['N'])+1):
+#    ax.plot(count, fid[i], label='bath spin %d'%i)
 #ax.plot(count, fid[1], label='bath spin')
-ax.legend(fontsize=9)
-ax.set_xlabel('t', fontsize=12)
-ax.set_ylabel('fidelity', fontsize=12)
-ax.set_title(r'$F$-t, N=%d'%params['N'], fontsize=16)
+ax.legend(fontsize=16)
+ax.set_xlabel('t', fontsize=16)
+ax.set_ylabel('fidelity', fontsize=16)
+ax.set_title(r'$F$-t, N=%d'%params['N'], fontsize=18)
 
 # plot expectation
 #fig, ax = plt.subplots(figsize=(8,6))
