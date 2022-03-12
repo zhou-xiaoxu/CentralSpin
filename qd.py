@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 @author: Xiaoxu Zhou
-Latest update: 03/02/2022
+Latest update: 03/11/2022
 """
 
 import numpy as np
@@ -9,7 +9,6 @@ import qutip as qt
 
 import matplotlib.pyplot as plt
 
-#from utils.nuclei import tensor_power, Ixi, Iyi, Izi, qtrace2, qtrace4
 from utils.utils import tensor_power, sigmaxi, sigmayi, sigmazi, qtrace
 
 
@@ -36,10 +35,8 @@ class CentralSpin(object):
             self.cops = []  # TBC. This project doesn't take 'D' into considerations.
         
         self.c_init = c_init
-#        print("c_init:", c_init)
         self.env_init = env_init
         self.c_tar = c_init  # target electron spin state
-#        self.env_tar = qt.ket2dm(qt.basis(4, 3)) # target env spin state
         self.env_tar = c_init
         self.rho_init = qt.tensor([self.c_init, self.env_init])
        
