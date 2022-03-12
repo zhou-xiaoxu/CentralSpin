@@ -108,9 +108,9 @@ class CentralSpin(object):
 
 params = dict()
 params = {
-          "N": 3,
-          "omega": [1e6,1e6,1e6,1e6,0.5,0.6,0.7],
-          "A": [2.6*1e6,1.9*1e6,1.2*1e6,0.16,0.18,0.1,0.1],
+          "N": 4,
+          "omega": [1e6,1e6,1e6,1e6,1e6,1e6,1e6],
+          "A": [5.6*1e6,1.9*1e6,1.2*1e6,1e6,1e6,1e6,1e6],
           "Bac": 1,
           "T": 1e-6,
           "dt": 1e-8,
@@ -127,14 +127,16 @@ exp_x, exp_y, exp_z = model.expect(state_list)
 count = params['omega'][0] * model.tlist
 
 # plot fidelity
+
 fig, ax = plt.subplots(figsize=(8,6))
 ax.plot(count, fid[0], label='central spin')
 for i in range(1,int(params['N'])+1):
     ax.plot(count, fid[i], label='bath spin %d'%i)
-ax.legend(fontsize=16)
+ax.legend(fontsize=16, loc='upper right')
 ax.set_xlabel('$\omega t$', fontsize=16)
 ax.set_ylabel('fidelity', fontsize=16)
 ax.set_title(r'$F$-t, N=%d'%params['N'], fontsize=18)
+
 
 # plot expectation
 fig, ax = plt.subplots(figsize=(8,6))
@@ -153,7 +155,7 @@ for i in range(1,int(params['N']+1)):
     ax.plot(count, exp_z[i][0], label=r'$\langle \sigma_z \rangle$ on bath spin %d'%i)
 ax.plot(count, exp_z[1][0], label=r'$\langle \sigma_z \rangle$ on each bath spin')
 
-ax.legend(fontsize=9)
+ax.legend(fontsize=9, loc='upper right')
 ax.set_xlabel('t', fontsize=12)
 ax.set_ylabel(r'$\langle \sigma_i \rangle$', fontsize=12)
 ax.set_title(r'$\langle \sigma_i \rangle$-t, N=%d'%params['N'], fontsize=16)
