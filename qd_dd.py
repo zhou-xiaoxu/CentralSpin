@@ -27,7 +27,7 @@ class QDSystem(object):
         
         self.T = params['T']
         self.dt = params['dt']
-        self.tlist = np.arange(0,params['T']+params['dt'],params['dt'])
+        self.tlist = np.arange(0,self.T+self.dt,self.dt)
         
         if self.params["option"] == 'U':
             self.cops = []
@@ -74,13 +74,15 @@ class QDSystem(object):
         Ham = Ham_e + Ham_env + Ham_int
         
         # Hamiltonian in rotating frame
+        omegar = 2*np.pi/1e-2
+        tr = 2e-2
         Ham_r = qt.tensor([qt.Qobj(np.zeros((2, 2))), tensor_power(zero, self.N)])
         for i in range(1,self.N+1):
             Ham_r += self.A[i-1] * \
-            (qt.tensor([qt.sigmax(), (sigmaxi(i,self.N)*np.cos(2*self.omega[0]) + \
-                                  sigmayi(i,self.N)*np.sin(2*self.omega[0]))]) + \
-             qt.tensor([qt.sigmay(), (-sigmaxi(i,self.N)*np.sin(2*self.omega[0]) + \
-                                   sigmayi(i,self.N)*np.cos(2*self.omega[0]))]))
+            (qt.tensor([qt.sigmax(), (sigmaxi(i,self.N)*np.cos(2*omegar*tr) + \
+                                  sigmayi(i,self.N)*np.sin(2*omegar*tr))]) + \
+             qt.tensor([qt.sigmay(), (-sigmaxi(i,self.N)*np.sin(2*omegar*tr) + \
+                                   sigmayi(i,self.N)*np.cos(2*omegar*tr))]))
         
         return Ham, Ham_r
 
@@ -264,7 +266,7 @@ params = {
           "A": [5.6*1e6,1.9*1e6,1.2*1e6,1e6,1e6,1e6,1e6],
           "Bac": 1,
           "T": 2e-6,
-          "dt": 1e-8,
+          "dt": 2e-9,
           "option": 'U'
           }
 
@@ -273,7 +275,8 @@ c_init = qt.ket2dm(qt.basis(2, 0))
 env_init = tensor_power(qt.ket2dm(qt.basis(2, 1)), params['N'])  # alternative
 model = QDSystem(params, c_init, env_init)
 Ham, Ham_r = model.ham()
-endstate1, state_list1 = Evolve.free(Ham_r, model.rho_init, model.N, model.T, model.dt)
+
+endstate1, state_list1 = Evolve.free(Ham, model.rho_init, model.N, 1/3*model.T, model.dt)
 fid1 = Calculate.fid(model.N, model.env_tar, state_list1)
 exp_x1, exp_y1, exp_z1 = Calculate.expect(model.N, state_list1)
 
@@ -281,7 +284,7 @@ endstate2, state_list2 = Evolve.rot(endstate1, model.N, 'z', np.pi)
 fid2 = Calculate.fidr(model.N, model.env_tar, state_list2)
 exp_x2, exp_y2, exp_z2 = Calculate.expectr(model.N, state_list2)
 
-endstate3, state_list3 = Evolve.free(Ham_r, endstate2, model.N, model.T, model.dt)
+endstate3, state_list3 = Evolve.free(Ham, endstate2, model.N, 1/3*model.T, model.dt)
 fid3 = Calculate.fid(model.N, model.env_tar, state_list3)
 exp_x3, exp_y3, exp_z3 = Calculate.expect(model.N, state_list3)
 
@@ -289,7 +292,7 @@ endstate4, state_list4 = Evolve.rot(endstate3, model.N, 'z', np.pi)
 fid4 = Calculate.fidr(model.N, model.env_tar, state_list4)
 exp_x4, exp_y4, exp_z4 = Calculate.expectr(model.N, state_list4)
 
-endstate5, state_list5 = Evolve.free(Ham_r, endstate4, model.N, model.T, model.dt)
+endstate5, state_list5 = Evolve.free(Ham, endstate4, model.N, 1/3*model.T, model.dt)
 fid5 = Calculate.fid(model.N, model.env_tar, state_list5)
 exp_x5, exp_y5, exp_z5 = Calculate.expect(model.N, state_list5)
 
@@ -297,9 +300,9 @@ exp_x5, exp_y5, exp_z5 = Calculate.expect(model.N, state_list5)
 # plot fidelity
 count = params['omega'][0] * model.tlist
 
-Calculate.plot(count, fid1, model.N)
-Calculate.plot(count, fid3, model.N)
-Calculate.plot(count, fid5, model.N)
+Calculate.plot(count[:int(1/3*len(model.tlist))+2], fid1, model.N)
+Calculate.plot(count[:int(1/3*len(model.tlist))+2], fid3, model.N)
+Calculate.plot(count[:int(1/3*len(model.tlist))+2], fid5, model.N)
 
 
 # plot expectation
