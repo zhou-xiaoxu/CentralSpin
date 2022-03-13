@@ -104,18 +104,52 @@ class Evolve(object):
 #        print('state_list:', len(state_list[0]))
         return evol.states[-1], state_list
     
-    def rot(axis, omega, deltat):
+    def rot(state, N, axis, phi):
         """
-        Considering duration of a pulse rather than a delta pulse
+        The whole system rotates angle phi around axis-x, or -y, or -z
+        The system consists of 1 electron and N nuclei
+        """
+        spin = []
+        if axis=='x':
+            for i in range(0,N+1):
+                spin.append(qt.rx(phi) * qt.ptrace(state,i))
+#            print('spin:', spin)    
+            state_ = spin[0]
+            for i in range(1,N+1):
+                state_ = qt.tensor([state_, spin[i]])
+#            print('state_:', state_)
+        
+        elif axis=='y':
+            for i in range(0,N+1):
+                spin.append(qt.ry(phi) * qt.ptrace(state,i))
+            state_ = spin[0]
+            for i in range(1,N+1):
+                state_ = qt.tensor([state_, spin[i]])
+        
+        elif axis=='z':
+            for i in range(0,N+1):
+                spin.append(qt.rz(phi) * qt.ptrace(state,i))
+            state_ = spin[0]
+            for i in range(1,N+1):
+                state_ = qt.tensor([state_, spin[i]])
+        
+        else:
+            print('Undefined axis')
+        
+        return state_, spin
+        
+    def rect(axis, omega, deltat):
+        """
+        An x-, or y-, or z-pulse with time duration rather than a delta pulse
         Args:
             deltat: time duration of the pulse
         """
         if axis=='x':
-            rotm = qt.Rx(omega*deltat)
+            rotm = qt.rx(omega*deltat)
         elif axis=='y':
-            rotm = qt.Ry(omega*deltat)
+            rotm = qt.ry(omega*deltat)
         elif axis=='z':
-            rotm = qt.Rz(omega*deltat)
+            rotm = qt.rz(omega*deltat)
         else:
             print('Undefined axis')
             
@@ -141,42 +175,87 @@ class Evolve(object):
         return pulse
 
 
-def fid(N, tar, state_list):
-    """
-    Calculate fidelity
-    """
-    fid = []  # fidelity especially for spin system
-    fid.append([(s[0] * tar).tr() + \
-                2 * np.sqrt(np.linalg.det(s[0]) * np.linalg.det(tar)) \
-                for s in state_list[0]])
-    for i in range(1,N+1):
-        fid.append([(s[0] * tar).tr() + \
-                    2 * np.sqrt(np.linalg.det(s[0]) * np.linalg.det(tar)) \
-                    for s in state_list[i]])
+class Calculate(object):
     
-    fid2 = []  # general form of fidelity
-    fid2.append([np.square(np.absolute((tar.sqrtm() * s[0] * tar.sqrtm()).sqrtm().tr())) \
-                 for s in state_list[0]])
-    for i in range(1,N+1):
-        fid2.append([np.square(np.absolute((tar.sqrtm() * s[0] * tar.sqrtm()).sqrtm().tr())) \
-                     for s in state_list[i]])
     
-    return fid
+    def fid(N, tar, state_list):
+        """
+        Calculate fidelity
+        """
+        fid = []  # fidelity especially for spin system
+        for i in range(0,N+1):
+            fid.append([(s[0] * tar).tr() + \
+                        2 * np.sqrt(np.linalg.det(s[0]) * np.linalg.det(tar)) \
+                        for s in state_list[i]])
+        
+        fid2 = []  # general form of fidelity
+        for i in range(0,N+1):
+            fid2.append([np.square(np.absolute((tar.sqrtm() * s[0] * tar.sqrtm()).sqrtm().tr())) \
+                         for s in state_list[i]])
+        
+        return fid2
+    
+    def fidr(N, tar, state):
+        """
+        Calculate fidelity after a delta pulse
+        """
+        fid = []  # fidelity especially for spin system
+        for i in range(0,N+1):
+            fid.append([(state[i] * tar).tr() + \
+                        2 * np.sqrt(np.linalg.det(state[i]) * np.linalg.det(tar))])
+        
+        fid2 = []  # general form of fidelity
+        for i in range(0,N+1):
+            fid2.append([np.square(np.absolute((tar.sqrtm() * state[i] * tar.sqrtm()).sqrtm().tr()))])
+        
+        return fid2
+    
+    
+    def expect(N, state_list):
+        """
+        Calculate expectation values of observable sigma_x, sigma_y, sigma_z
+        """
+        exp_x = []
+        exp_y = []
+        exp_z = []
+        for i in range(0,N+1):
+            exp_x.append([qt.expect(qt.sigmax(), [s[0] for s in state_list[i]])])
+            exp_y.append([qt.expect(qt.sigmay(), [s[0] for s in state_list[i]])])
+            exp_z.append([qt.expect(qt.sigmaz(), [s[0] for s in state_list[i]])])
+        
+        return exp_x, exp_y, exp_z
+    
+    def expectr(N, state):
+        """
+        Calculate expectation values of observable sigma_x, sigma_y, sigma_z
+        after a delta pulse
+        """
+        exp_x = []
+        exp_y = []
+        exp_z = []
+        for i in range(0,N+1):
+            exp_x.append([qt.expect(qt.sigmax(), state[i])])
+            exp_y.append([qt.expect(qt.sigmay(), state[i])])
+            exp_z.append([qt.expect(qt.sigmaz(), state[i])])
+        
+        return exp_x, exp_y, exp_z
 
-def expect(N, state_list):
-    """
-    Calculate expectation of observable sigma_x, sigma_y, sigma_z
-    """
-    exp_x = []
-    exp_y = []
-    exp_z = []
-    for i in range(0,N+1):
-        exp_x.append([qt.expect(qt.sigmax(), [s[0] for s in state_list[i]])])
-        exp_y.append([qt.expect(qt.sigmay(), [s[0] for s in state_list[i]])])
-        exp_z.append([qt.expect(qt.sigmaz(), [s[0] for s in state_list[i]])])
-    
-    return exp_x, exp_y, exp_z
-
+    def plot(count, fid, N):
+        """
+        Plot trend of fidelity
+        Args:
+            fid: original fidelity list
+            N: N nuclei
+        """
+        fig, ax = plt.subplots(figsize=(8,6))
+        ax.plot(count, fid[0], label='central spin')
+        for i in range(1, int(N)+1):
+            ax.plot(count, fid[i], label='bath spin %d'%i)
+        ax.legend(fontsize=16, loc='upper right')
+        ax.set_xlabel(r'$\omega t$', fontsize=16)
+        ax.set_ylabel('fidelity', fontsize=16)
+        ax.set_title(r'$ F-t, N=%d $'%N, fontsize=18)
+        
 
 params = dict()
 params = {
@@ -184,34 +263,47 @@ params = {
           "omega": [1e6,1e6,1e6,1e6,1e6,1e6,1e6],
           "A": [5.6*1e6,1.9*1e6,1.2*1e6,1e6,1e6,1e6,1e6],
           "Bac": 1,
-          "T": 1e-6,
+          "T": 2e-6,
           "dt": 1e-8,
           "option": 'U'
           }
 
+# 2 pi-pulses around z-axis
 c_init = qt.ket2dm(qt.basis(2, 0))
 env_init = tensor_power(qt.ket2dm(qt.basis(2, 1)), params['N'])  # alternative
 model = QDSystem(params, c_init, env_init)
 Ham, Ham_r = model.ham()
 endstate1, state_list1 = Evolve.free(Ham_r, model.rho_init, model.N, model.T, model.dt)
-fid1 = fid(model.N, model.env_tar, state_list1)
-exp_x1, exp_y1, exp_z1 = expect(model.N, state_list1)
+fid1 = Calculate.fid(model.N, model.env_tar, state_list1)
+exp_x1, exp_y1, exp_z1 = Calculate.expect(model.N, state_list1)
 
-count = params['omega'][0] * model.tlist
+endstate2, state_list2 = Evolve.rot(endstate1, model.N, 'z', np.pi)
+fid2 = Calculate.fidr(model.N, model.env_tar, state_list2)
+exp_x2, exp_y2, exp_z2 = Calculate.expectr(model.N, state_list2)
+
+endstate3, state_list3 = Evolve.free(Ham_r, endstate2, model.N, model.T, model.dt)
+fid3 = Calculate.fid(model.N, model.env_tar, state_list3)
+exp_x3, exp_y3, exp_z3 = Calculate.expect(model.N, state_list3)
+
+endstate4, state_list4 = Evolve.rot(endstate3, model.N, 'z', np.pi)
+fid4 = Calculate.fidr(model.N, model.env_tar, state_list4)
+exp_x4, exp_y4, exp_z4 = Calculate.expectr(model.N, state_list4)
+
+endstate5, state_list5 = Evolve.free(Ham_r, endstate4, model.N, model.T, model.dt)
+fid5 = Calculate.fid(model.N, model.env_tar, state_list5)
+exp_x5, exp_y5, exp_z5 = Calculate.expect(model.N, state_list5)
+
 
 # plot fidelity
-fig, ax = plt.subplots(figsize=(8,6))
-ax.plot(count, fid1[0], label='central spin')
-for i in range(1,int(params['N']+1)):
-    ax.plot(count, fid1[i], label='bath spin %d'%i)
-ax.legend(fontsize=16, loc='upper right')
-ax.set_xlabel(r'$\omega t$', fontsize=16)
-ax.set_ylabel('fidelity', fontsize=16)
-ax.set_title(r'$ F-t, N=%d $'%params['N'], fontsize=18)
+count = params['omega'][0] * model.tlist
+
+Calculate.plot(count, fid1, model.N)
+Calculate.plot(count, fid3, model.N)
+Calculate.plot(count, fid5, model.N)
 
 
 # plot expectation
-fig, ax = plt.subplots(figsize=(8,6))
+#fig, ax = plt.subplots(figsize=(8,6))
 # sigmax
 #ax.plot(count, exp_x1[0][0], label=r'$\langle \sigma_x \rangle$ on central spin')
 #for i in range(1,int(params['N']+1)):
@@ -222,15 +314,15 @@ fig, ax = plt.subplots(figsize=(8,6))
 #    ax.plot(count, exp_y1[i][0], label=r'$\langle \sigma_y \rangle$ on bath spin %d'%i)
 #ax.plot(count, exp_x1[0][0], label=r'$\langle \sigma_x \rangle, \langle \sigma_y \rangle$ on each spin')
 # sigmaz
-ax.plot(count, exp_z1[0][0], label=r'$\langle \sigma_z \rangle$ on central spin')
-for i in range(1,int(params['N']+1)):
-    ax.plot(count, exp_z1[i][0], label=r'$\langle \sigma_z \rangle$ on bath spin %d'%i)
-ax.plot(count, exp_z1[1][0], label=r'$\langle \sigma_z \rangle$ on each bath spin')
+#ax.plot(count, exp_z3[0][0], label=r'$\langle \sigma_z \rangle$ on central spin')
+#for i in range(1,int(params['N']+1)):
+#    ax.plot(count, exp_z1[i][0], label=r'$\langle \sigma_z \rangle$ on bath spin %d'%i)
+#ax.plot(count, exp_z3[1][0], label=r'$\langle \sigma_z \rangle$ on each bath spin')
 
-ax.legend(fontsize=9, loc='upper right')
-ax.set_xlabel(r'$\omega t$', fontsize=12)
-ax.set_ylabel(r'$\langle \sigma_i \rangle$', fontsize=12)
-ax.set_title(r'$ \langle \sigma_i \rangle-t, N=%d $'%params['N'], fontsize=16)
+#ax.legend(fontsize=9, loc='upper right')
+#ax.set_xlabel(r'$\omega t$', fontsize=12)
+#ax.set_ylabel(r'$\langle \sigma_i \rangle$', fontsize=12)
+#ax.set_title(r'$ \langle \sigma_i \rangle-t, N=%d $'%params['N'], fontsize=16)
 
 
 #plt.figure(figsize=(8,6))
