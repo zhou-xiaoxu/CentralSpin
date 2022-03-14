@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 @author: Xiaoxu Zhou
-Latest update: 03/13/2022
+Latest update: 03/14/2022
 """
 
 import numpy as np
@@ -64,11 +64,17 @@ class QDSystem(object):
         
         # interaction term in Hamiltonian
         Ham_int = qt.tensor([qt.Qobj(np.zeros((2, 2))), tensor_power(zero, self.N)])
+        ## general form
+#        for i in range(1,self.N+1):
+#            Ham_int += self.A[i-1] * \
+#                       (qt.tensor([qt.sigmax(), sigmaxi(i, self.N)]) + \
+#                        qt.tensor([qt.sigmay(), sigmayi(i, self.N)]) + \
+#                        qt.tensor([qt.sigmaz(), sigmazi(i, self.N)]))
+        ## neglect zz interaction
         for i in range(1,self.N+1):
             Ham_int += self.A[i-1] * \
                        (qt.tensor([qt.sigmax(), sigmaxi(i, self.N)]) + \
-                        qt.tensor([qt.sigmay(), sigmayi(i, self.N)]) + \
-                        qt.tensor([qt.sigmaz(), sigmazi(i, self.N)]))
+                        qt.tensor([qt.sigmay(), sigmayi(i, self.N)]))
         
         # total Hamiltonian in interaction picture
         Ham = Ham_e + Ham_env + Ham_int
