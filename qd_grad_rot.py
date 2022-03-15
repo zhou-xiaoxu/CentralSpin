@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 @author: Xiaoxu Zhou
-Latest update: 03/13/2022
+Latest update: 03/15/2022
 """
 
 import numpy as np
@@ -23,10 +23,9 @@ class CentralSpin(object):
         self.N = int(params['N'])
         self.omega = params['omega']
         self.A = params['A']
-        self.Bac = params['Bac']
         
-        self.T = int(params['T'])
-        self.dt = int(params['dt'])
+        self.T = params['T']
+        self.dt = params['dt']
         self.tlist = np.arange(0,params['T']+params['dt'],params['dt'])
         
         if self.params["option"] == 'U':
@@ -52,35 +51,36 @@ class CentralSpin(object):
             for central spin, others are for env spins respectively
             A: the list of coupling strengths between central and env spin
         """
-        # electron term in Hamiltonian
-        Ham_e = self.omega[0] * qt.tensor([qt.sigmaz(), tensor_power(qt.qeye(2), self.N)])
-
-        # environment term in Hamiltonian
         zero = qt.ket2dm(qt.Qobj(np.zeros((2, 1))))
-        Ham_env = tensor_power(zero, self.N)
+        zeroN = tensor_power(zero, self.N)
+        zeroN1 = tensor_power(zero, self.N+1)
+        sigmax0 = qt.tensor([qt.sigmax(), tensor_power(qt.qeye(2), self.N)])
+        sigmay0 = qt.tensor([qt.sigmay(), tensor_power(qt.qeye(2), self.N)])
+        sigmaz0 = qt.tensor([qt.sigmaz(), tensor_power(qt.qeye(2), self.N)])
+        
+        # electron term in Hamiltonian
+        Ham_e = 0.5 * self.omega[0] * sigmaz0
+        
+        # environment term in Hamiltonian
+        Ham_env = zeroN
         for i in range(1,self.N+1):
-            Ham_env += self.omega[i] * sigmazi(i, self.N)
+            Ham_env += 0.5 * self.omega[i] * sigmazi(i, self.N)
         Ham_env = qt.tensor([qt.qeye(2), Ham_env])
         
         # interaction term in Hamiltonian
-        Ham_int = qt.tensor([qt.Qobj(np.zeros((2, 2))), tensor_power(zero, self.N)])
+        Ham_int = zeroN1
+        Ham_int_r = zeroN1
         for i in range(1,self.N+1):
-            Ham_int += self.A[i-1] * \
-                       (qt.tensor([qt.sigmax(), sigmaxi(i, self.N)]) + \
-                        qt.tensor([qt.sigmay(), sigmayi(i, self.N)]) + \
-                        qt.tensor([qt.sigmaz(), sigmazi(i, self.N)]))
+            Ham_int += 1/4 * self.A[i-1] * \
+                       (sigmax0 * sigmaxi(i, self.N+1) + \
+                        sigmay0 * sigmayi(i, self.N+1))
+            Ham_int_r += 1/4 * self.A[i-1] * \
+                         (np.cos(self.omega[0]-self.omega[i]) * (sigmax0*sigmaxi(i,self.N+1) + sigmay0*sigmayi(i,self.N+1)) + \
+                          np.sin(self.omega[0]-self.omega[i]) * (sigmax0*sigmayi(i,self.N+1) - sigmay0*sigmaxi(i,self.N+1)))
         
         # total Hamiltonian in interaction picture
         Ham = Ham_e + Ham_env + Ham_int
-        
-        # Hamiltonian in rotating frame
-        Ham_r = qt.tensor([qt.Qobj(np.zeros((2, 2))), tensor_power(zero, self.N)])
-        for i in range(1,self.N+1):
-            Ham_r += self.A[i-1] * \
-            (qt.tensor([qt.sigmax(), (sigmaxi(i,self.N)*np.cos(2*self.omega[0]) + \
-                                  sigmayi(i,self.N)*np.sin(2*self.omega[0]))]) + \
-             qt.tensor([qt.sigmay(), (-sigmaxi(i,self.N)*np.sin(2*self.omega[0]) + \
-                                   sigmayi(i,self.N)*np.cos(2*self.omega[0]))]))
+        Ham_r = Ham_int_r
         
         return Ham, Ham_r
         
@@ -138,11 +138,10 @@ class CentralSpin(object):
 params = dict()
 params = {
           "N": 4,
-          "omega": [1e6,1e6,1e6,1e6,1e6,1e6,1e6],
-          "A": [5.6*1e6,1.9*1e6,1.2*1e6,1e6,1e6,1e6,1e6],
-          "Bac": 1,
-          "T": 1e-6,
-          "dt": 1e-8,
+          "omega": [4.6*1e6,4.6*1e6,2.9*1e6,1.2*1e6,1e6,1e6,1e6],
+          "A": [1.20*1e6,1.18*1e6,1.15*1e6,1e6,1e6,1e6,1e6],
+          "T": 8e-6,
+          "dt": 8e-8,
           "option": 'U'
           }
 
@@ -150,7 +149,7 @@ c_init = qt.ket2dm(qt.basis(2, 0))
 env_init = tensor_power(qt.ket2dm(qt.basis(2, 1)), params['N'])  # alternative
 model = CentralSpin(params, c_init, env_init)
 Ham, Ham_r = model.ham()
-states, state_list = model.evolve(Ham_r)
+states, state_list = model.evolve(Ham)
 fid = model.fid(state_list)
 exp_x, exp_y, exp_z = model.expect(state_list)
 
@@ -168,7 +167,7 @@ ax.set_title(r'$ F-t, N=%d $'%params['N'], fontsize=18)
 
 
 # plot expectation
-fig, ax = plt.subplots(figsize=(8,6))
+#fig, ax = plt.subplots(figsize=(8,6))
 # sigmax
 #ax.plot(count, exp_x[0][0], label=r'$\langle \sigma_x \rangle$ on central spin')
 #for i in range(1,int(params['N']+1)):
@@ -179,15 +178,15 @@ fig, ax = plt.subplots(figsize=(8,6))
 #    ax.plot(count, exp_y[i][0], label=r'$\langle \sigma_y \rangle$ on bath spin %d'%i)
 #ax.plot(count, exp_x[0][0], label=r'$\langle \sigma_x \rangle, \langle \sigma_y \rangle$ on each spin')
 # sigmaz
-ax.plot(count, exp_z[0][0], label=r'$\langle \sigma_z \rangle$ on central spin')
-for i in range(1,int(params['N']+1)):
-    ax.plot(count, exp_z[i][0], label=r'$\langle \sigma_z \rangle$ on bath spin %d'%i)
-ax.plot(count, exp_z[1][0], label=r'$\langle \sigma_z \rangle$ on each bath spin')
+#ax.plot(count, exp_z[0][0], label=r'$\langle \sigma_z \rangle$ on central spin')
+#for i in range(1,int(params['N']+1)):
+#    ax.plot(count, exp_z[i][0], label=r'$\langle \sigma_z \rangle$ on bath spin %d'%i)
+#ax.plot(count, exp_z[1][0], label=r'$\langle \sigma_z \rangle$ on each bath spin')
 
-ax.legend(fontsize=9, loc='upper right')
-ax.set_xlabel(r'$\omega t$', fontsize=12)
-ax.set_ylabel(r'$\langle \sigma_i \rangle$', fontsize=12)
-ax.set_title(r'$ \langle \sigma_i \rangle-t, N=%d $'%params['N'], fontsize=16)
+#ax.legend(fontsize=9, loc='upper right')
+#ax.set_xlabel(r'$\omega t$', fontsize=12)
+#ax.set_ylabel(r'$\langle \sigma_i \rangle$', fontsize=12)
+#ax.set_title(r'$ \langle \sigma_i \rangle-t, N=%d $'%params['N'], fontsize=16)
 
 
 #plt.figure(figsize=(8,6))
