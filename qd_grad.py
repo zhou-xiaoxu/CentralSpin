@@ -141,7 +141,7 @@ class CentralSpin(object):
 params = dict()
 params = {
           "N": 3,
-          "omega": [2.0*1e6,8.2*1e6,7.0*1e6,5.8*1e6,4.6*1e6,3.4*1e6,2.2*1e6,1.0*1e6],
+          "omega": [2.0*1e6,10.0*1e6,6.0*1e6,2.0*1e6,4.6*1e6,3.4*1e6,2.2*1e6,1.0*1e6],
           "A": [1.20*1e6,1.18*1e6,1.16*1e6,1.14*1e6,1.12*1e6,1.10*1e6,1.08*1e6],
           "T": 10e-6,
           "dt": 10e-8,
@@ -151,7 +151,7 @@ params = {
 c_init = qt.ket2dm(qt.basis(2, 0))
 env_init = tensor_power(qt.ket2dm(qt.basis(2, 1)), params['N'])  # alternative
 
-omega0_list = np.arange(2.0*1e6, 12.0*1e6, 0.1*1e6)
+omega0_list = np.arange(1.0*1e6, 12.0*1e6, 0.1*1e6)
 fidm_e, fidm_1, fidm_2, fidm_3 = [], [], [], []  # fid max
 fidmw_e, fidmw_1, fidmw_2, fidmw_3 = 2.0, 2.0, 2.0, 2.0  # omega0 giving fid max
 for omega0 in omega0_list:
@@ -174,7 +174,6 @@ for omega0 in omega0_list:
             fidmw_2 = omega0 * 1e-6
         if fidm_3[-1]>max(fidm_3[:-1]):
             fidmw_3 = omega0 * 1e-6
-    
     
     # plot fidelity
     count = omega0 * model.tlist
@@ -202,7 +201,7 @@ for omega0 in omega0_list:
     plt.xticks(fontsize=14)
     plt.yticks(fontsize=14)
     plt.title(r'$ F-t, \omega_0=%.1f \times 10^6 rad/s$'%(omega0*1e-6), fontsize=20)
-    plt.savefig(r'D:\transfer\trans_code\results_qd\grad\%.1f.png'%(omega0*1e-6))
+    plt.savefig(r'D:\transfer\trans_code\results_qd\grad\group2\%.1f.png'%(omega0*1e-6))
 
 
 print("fidmw:", fidmw_e, fidmw_1, fidmw_2, fidmw_3)
@@ -221,5 +220,4 @@ plt.ylabel('Maximal fidelity', fontsize=16)
 plt.xticks(fontsize=14)
 plt.yticks(fontsize=14)
 plt.title('Maximal fidelity $- \omega_0$', fontsize=20)
-plt.savefig(r'D:\transfer\trans_code\results_qd\fidmax.png')
-
+plt.savefig(r'D:\transfer\trans_code\results_qd\grad\group2\fidmax2.png')
