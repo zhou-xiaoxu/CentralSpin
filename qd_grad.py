@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 @author: Xiaoxu Zhou
-Latest update: 03/16/2022
+Latest update: 03/17/2022
 """
 
 import numpy as np
@@ -141,6 +141,7 @@ class CentralSpin(object):
 params = dict()
 params = {
           "N": 3,
+          "c": [1/np.sqrt(2),1/np.sqrt(2)],
           "omega": [2.0*1e6,10.0*1e6,6.0*1e6,2.0*1e6,4.6*1e6,3.4*1e6,2.2*1e6,1.0*1e6],
           "A": [1.20*1e6,1.18*1e6,1.16*1e6,1.14*1e6,1.12*1e6,1.10*1e6,1.08*1e6],
           "T": 10e-6,
@@ -148,46 +149,19 @@ params = {
           "option": 'U'
           }
 
-c_init = qt.ket2dm(qt.basis(2, 0))
-env_init = tensor_power(qt.ket2dm(qt.basis(2, 1)), params['N'])  # alternative
+c_init = qt.ket2dm(params['c'][0]*qt.basis(2,0)+params['c'][1]*qt.basis(2,1))
+env_init = tensor_power(qt.ket2dm(qt.basis(2,0)), params['N'])  # (2,0) is ground state
 
-omega0_list = np.arange(1.0*1e6, 12.0*1e6, 0.1*1e6)
-fidm_e, fidm_1, fidm_2, fidm_3 = [], [], [], []  # fid max
-fidmw_e, fidmw_1, fidmw_2, fidmw_3 = 2.0, 2.0, 2.0, 2.0  # omega0 giving fid max
-for omega0 in omega0_list:
-    model = CentralSpin(params, omega0, c_init, env_init)
+find='1'  # 1 for changing initial electron state, 2 for finding omega0
+
+if find=='1':
+    model = CentralSpin(params, params['omega'][0], c_init, env_init)
     Ham, Ham_r = model.ham()
     states, state_list = model.evolve(Ham)
     fid = model.fid(state_list)
     
-    fidm_e.append(max(fid[0]))
-    fidm_1.append(max(fid[1]))
-    fidm_2.append(max(fid[2]))
-    fidm_3.append(max(fid[3]))
-    
-    if len(fidm_e)>=2:
-        if fidm_e[-1]>max(fidm_e[:-1]):
-            fidmw_e = omega0 * 1e-6
-        if fidm_1[-1]>max(fidm_1[:-1]):
-            fidmw_1 = omega0 * 1e-6
-        if fidm_2[-1]>max(fidm_2[:-1]):
-            fidmw_2 = omega0 * 1e-6
-        if fidm_3[-1]>max(fidm_3[:-1]):
-            fidmw_3 = omega0 * 1e-6
-    
     # plot fidelity
-    count = omega0 * model.tlist
-    
-#    fig, ax = plt.subplots(figsize=(8,6))
-#    ax.plot(count, fid[0], label='electron')
-#    for i in range(1,int(params['N'])+1):
-#        ax.plot(count, fid[i], label='nucleus %d'%i)
-#    ax.legend(fontsize=16, loc='upper right')
-#    ax.set_xlabel(r'$\omega t$', fontsize=16)
-#    ax.set_ylabel('fidelity', fontsize=16)
-#    ax.tick_params(labelsize=12)
-#    ax.set_title(r'$ F-t, \omega_0=%.1f \times 10^6 rad/s$'%(omega0*1e-6), fontsize=18)
-    
+    count = params['omega'][0] * model.tlist
     fig = plt.figure(figsize=(8,6))
     l1, = plt.plot(count, fid[0])
     l2, = plt.plot(count, fid[1])
@@ -200,24 +174,79 @@ for omega0 in omega0_list:
     plt.ylabel('fidelity', fontsize=16)
     plt.xticks(fontsize=14)
     plt.yticks(fontsize=14)
-    plt.title(r'$ F-t, \omega_0=%.1f \times 10^6 rad/s$'%(omega0*1e-6), fontsize=20)
-    plt.savefig(r'D:\transfer\trans_code\results_qd\grad\group2\%.1f.png'%(omega0*1e-6))
+    plt.title('$F-t$', fontsize=20)
 
+elif find=='2':
+    omega0_list = np.arange(1.0*1e6, 12.0*1e6, 0.1*1e6)
+    fidm_e, fidm_1, fidm_2, fidm_3 = [], [], [], []  # fid max
+    fidmw_e, fidmw_1, fidmw_2, fidmw_3 = 2.0, 2.0, 2.0, 2.0  # omega0 giving fid max
+    for omega0 in omega0_list:
+        model = CentralSpin(params, omega0, c_init, env_init)
+        Ham, Ham_r = model.ham()
+        states, state_list = model.evolve(Ham)
+        fid = model.fid(state_list)
+        
+        fidm_e.append(max(fid[0]))
+        fidm_1.append(max(fid[1]))
+        fidm_2.append(max(fid[2]))
+        fidm_3.append(max(fid[3]))
+        
+        if len(fidm_e)>=2:
+            if fidm_e[-1]>max(fidm_e[:-1]):
+                fidmw_e = omega0 * 1e-6
+            if fidm_1[-1]>max(fidm_1[:-1]):
+                fidmw_1 = omega0 * 1e-6
+            if fidm_2[-1]>max(fidm_2[:-1]):
+                fidmw_2 = omega0 * 1e-6
+            if fidm_3[-1]>max(fidm_3[:-1]):
+                fidmw_3 = omega0 * 1e-6
+        
+        #exp_x, exp_y, exp_z = model.expect(state_list)
+        
+        # plot fidelity
+        count = omega0 * model.tlist
+        
+    #    fig, ax = plt.subplots(figsize=(8,6))
+    #    ax.plot(count, fid[0], label='electron')
+    #    for i in range(1,int(params['N'])+1):
+    #        ax.plot(count, fid[i], label='nucleus %d'%i)
+    #    ax.legend(fontsize=16, loc='upper right')
+    #    ax.set_xlabel(r'$\omega t$', fontsize=16)
+    #    ax.set_ylabel('fidelity', fontsize=16)
+    #    ax.tick_params(labelsize=12)
+    #    ax.set_title(r'$ F-t, \omega_0=%.1f \times 10^6 rad/s$'%(omega0*1e-6), fontsize=18)
+        
+        fig = plt.figure(figsize=(8,6))
+        l1, = plt.plot(count, fid[0])
+        l2, = plt.plot(count, fid[1])
+        l3, = plt.plot(count, fid[2])
+        l4, = plt.plot(count, fid[3])
+        plt.legend(handles=[l1, l2, l3, l4, ], 
+                   labels=['electron', 'nucleus 1', 'nuclues 2', 'nuclues 3'], 
+                   loc='center right', fontsize=16)
+        plt.xlabel(r'$\omega t$', fontsize=16)
+        plt.ylabel('fidelity', fontsize=16)
+        plt.xticks(fontsize=14)
+        plt.yticks(fontsize=14)
+        plt.title(r'$ F-t, \omega_0=%.1f \times 10^6 rad/s$'%(omega0*1e-6), fontsize=20)
+        plt.savefig(r'D:\transfer\trans_code\results_qd\grad\group2\%.1f.png'%(omega0*1e-6))
+    
+    
+    print("fidmw:", fidmw_e, fidmw_1, fidmw_2, fidmw_3)
+    
+    omega0_list_ = [i*1e-6 for i in omega0_list]
+    fig = plt.figure(figsize=(8,6))
+    l1, = plt.plot(omega0_list_, fidm_e)
+    l2, = plt.plot(omega0_list_, fidm_1)
+    l3, = plt.plot(omega0_list_, fidm_2)
+    l4, = plt.plot(omega0_list_, fidm_3)
+    plt.legend(handles=[l1, l2, l3, l4, ],
+              labels=['electron', 'nucleus 1', 'nucleus 2', 'nucleus 3'], 
+              loc='upper right', fontsize=16)
+    plt.xlabel('$\omega_0 (*10^6 rad/s)$', fontsize=16)
+    plt.ylabel('Maximal fidelity', fontsize=16)
+    plt.xticks(fontsize=14)
+    plt.yticks(fontsize=14)
+    plt.title('Maximal fidelity $- \omega_0$', fontsize=20)
+    plt.savefig(r'D:\transfer\trans_code\results_qd\grad\fidmax3.png')
 
-print("fidmw:", fidmw_e, fidmw_1, fidmw_2, fidmw_3)
-
-omega0_list_ = [i*1e-6 for i in omega0_list]
-fig = plt.figure(figsize=(8,6))
-l1, = plt.plot(omega0_list_, fidm_e)
-l2, = plt.plot(omega0_list_, fidm_1)
-l3, = plt.plot(omega0_list_, fidm_2)
-l4, = plt.plot(omega0_list_, fidm_3)
-plt.legend(handles=[l1, l2, l3, l4, ],
-          labels=['electron', 'nucleus 1', 'nucleus 2', 'nucleus 3'], 
-          loc='upper right', fontsize=16)
-plt.xlabel('$\omega_0 (*10^6 rad/s)$', fontsize=16)
-plt.ylabel('Maximal fidelity', fontsize=16)
-plt.xticks(fontsize=14)
-plt.yticks(fontsize=14)
-plt.title('Maximal fidelity $- \omega_0$', fontsize=20)
-plt.savefig(r'D:\transfer\trans_code\results_qd\grad\group2\fidmax2.png')
