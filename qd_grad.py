@@ -149,9 +149,7 @@ params = {
           "option": 'U'
           }
 
-ket0 = qt.basis(2, 0)
-ket1 = qt.basis(2, 1)
-c_init = qt.ket2dm(params['c'][0] * ket0 + params['c'][1] * ket1)
+c_init = qt.ket2dm(params['c'][0]*qt.basis(2,0)+params['c'][1]*qt.basis(2,1))
 env_init = tensor_power(qt.ket2dm(qt.basis(2,0)), params['N'])  # (2,0) is ground state
 
 find='1'  # 1 for changing initial electron state, 2 for finding omega0
