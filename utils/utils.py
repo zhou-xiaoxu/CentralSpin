@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-Useful functions for central-spin problem
+Useful functions for selective transformation problem
 @author: Xiaoxu Zhou
-Latest update: 09/18/2021
+Latest update: 03/20/2022
 """
 
 import numpy as np
@@ -103,6 +103,7 @@ def sigmazi(i, N):
 
 def qtrace(mat):
     """
+    ----03/12/2022 update: Could be replaced by Q.tr()----
     Calculate the trace of a 2*2 matrix in Qobj
     Args:
         mat: matrix to be calculated
@@ -112,3 +113,30 @@ def qtrace(mat):
     tr = tr11 + tr22
     return tr
 
+def oper_norm(F):
+    """
+    Normalize an operator
+    """
+    norm = F / np.sqrt(np.trace(F * qt.dag(F)))
+    return norm
+
+def fidm(A, B):
+    """
+    Calculate fidelity between operators A and B
+    """
+    A_n = oper_norm(A)  # normalize operators
+    B_n = oper_norm(B)
+    deno = np.sqrt(np.trace(A_n*qt.dag(A_n)) * np.trace(B_n*qt.dag(B_n)))
+    fid = np.abs(np.trace(qt.dag(A_n)*B_n)) / deno
+    
+    return fid
+
+def fidmu(A, B):
+    """
+    Calculate fidelity between unitary operators A and B
+    """
+    A_n = oper_norm(A)  # normalize operators
+    B_n = oper_norm(B)
+    fid = np.abs(np.trace(qt.dag(A_n) * B_n))
+    
+    return fid
