@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 @author: Xiaoxu Zhou
-Latest update: 03/17/2022
+Latest update: 03/20/2022
 """
 
 import numpy as np
@@ -9,7 +9,7 @@ import qutip as qt
 
 import matplotlib.pyplot as plt
 
-from utils.utils import tensor_power, sigmaxi, sigmayi, sigmazi
+from utils.utils import tensor_power, sigmaxi, sigmayi, sigmazi, fidm
 
 
 class CentralSpin(object):
@@ -24,6 +24,7 @@ class CentralSpin(object):
         self.omega = params['omega']
         self.omega[0] = omega0
         self.A = params['A']
+        self.n = int(params['n'])
         
         self.T = params['T']
         self.dt = params['dt']
@@ -85,7 +86,15 @@ class CentralSpin(object):
                          (np.cos(self.omega[0]-self.omega[i]) * (sigmax0*sigmaxi(i,self.N+1) + sigmay0*sigmayi(i,self.N+1)) + \
                           np.sin(self.omega[0]-self.omega[i]) * (sigmax0*sigmayi(i,self.N+1) - sigmay0*sigmaxi(i,self.N+1)))
         
-        return Ham, Ham_r
+        # target Hamiltonian
+        Ham_n = 0.5 * self.omega[self.n] * sigmazi(self.n, self.N)
+        Ham_n = qt.tensor([qt.qeye(2), Ham_n])
+        Ham_tar = Ham_e + Ham_n + \
+                  1/4 * self.A[self.n-1] * \
+                  (qt.tensor([qt.sigmax(), sigmaxi(self.n, self.N)]) + \
+                   qt.tensor([qt.sigmay(), sigmayi(self.n, self.N)]))
+        
+        return Ham, Ham_r, Ham_tar
         
     def evolve(self, Ham):
         """
@@ -141,9 +150,10 @@ class CentralSpin(object):
 params = dict()
 params = {
           "N": 3,
-          "c": [1/np.sqrt(2),1/np.sqrt(2)],
+          "c": [0,1],
           "omega": [2.0*1e6,10.0*1e6,6.0*1e6,2.0*1e6,4.6*1e6,3.4*1e6,2.2*1e6,1.0*1e6],
           "A": [1.20*1e6,1.18*1e6,1.16*1e6,1.14*1e6,1.12*1e6,1.10*1e6,1.08*1e6],
+          "n": 1,
           "T": 10e-6,
           "dt": 10e-8,
           "option": 'U'
@@ -156,9 +166,11 @@ find='1'  # 1 for changing initial electron state, 2 for finding omega0
 
 if find=='1':
     model = CentralSpin(params, params['omega'][0], c_init, env_init)
-    Ham, Ham_r = model.ham()
+    Ham, Ham_r, Ham_tar = model.ham()
     states, state_list = model.evolve(Ham)
     fid = model.fid(state_list)
+    fidm = fidm(Ham, Ham_tar)
+    print("fidm:", fidm)
     
     # plot fidelity
     count = params['omega'][0] * model.tlist
@@ -250,3 +262,34 @@ elif find=='2':
     plt.title('Maximal fidelity $- \omega_0$', fontsize=20)
     plt.savefig(r'D:\transfer\trans_code\results_qd\grad\fidmax3.png')
 
+# plot expectation
+#fig, ax = plt.subplots(figsize=(8,6))
+# sigmax
+#ax.plot(count, exp_x[0][0], label=r'$\langle \sigma_x \rangle$ on central spin')
+#for i in range(1,int(params['N']+1)):
+#    ax.plot(count, exp_x[i][0].T, label=r'$\langle \sigma_x \rangle$ on bath spin %d'%i)
+# sigmay
+#ax.plot(count, exp_y[0][0], label=r'$\langle \sigma_y \rangle$ on central spin')
+#for i in range(1,int(params['N']+1)):
+#    ax.plot(count, exp_y[i][0], label=r'$\langle \sigma_y \rangle$ on bath spin %d'%i)
+#ax.plot(count, exp_x[0][0], label=r'$\langle \sigma_x \rangle, \langle \sigma_y \rangle$ on each spin')
+# sigmaz
+#ax.plot(count, exp_z[0][0], label=r'$\langle \sigma_z \rangle$ on central spin')
+#for i in range(1,int(params['N']+1)):
+#    ax.plot(count, exp_z[i][0], label=r'$\langle \sigma_z \rangle$ on bath spin %d'%i)
+#ax.plot(count, exp_z[1][0], label=r'$\langle \sigma_z \rangle$ on each bath spin')
+
+#ax.legend(fontsize=9, loc='upper right')
+#ax.set_xlabel(r'$\omega t$', fontsize=12)
+#ax.set_ylabel(r'$\langle \sigma_i \rangle$', fontsize=12)
+#ax.set_title(r'$ \langle \sigma_i \rangle-t, N=%d $'%params['N'], fontsize=16)
+
+
+#plt.figure(figsize=(8,6))
+#plt.plot(count, exp_x[0][0], label=r'$\langle \sigma_x \rangle, \langle \sigma_y \rangle$ on each spin')
+#plt.plot(count, exp_z[0][0], label=r'$\langle \sigma_z \rangle$ on central spin')
+#for i in range(1,int(params['N']+1)):
+#    plt.plot(count, exp_z[i][0], label=r'$\langle \sigma_z \rangle$ on bath spin %d'%i)
+#plt.xlabel(r'$t$', fontsize=12)
+#plt.ylabel(r'$\langle \sigma_i \rangle$', fontsize=12)
+#plt.title(r'$ \langle \sigma_i \rangle-t, N=%d $'%params['N'], fontsize=16)
