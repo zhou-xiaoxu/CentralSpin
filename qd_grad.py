@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 @author: Xiaoxu Zhou
-Latest update: 03/20/2022
+Latest update: 03/21/2022
 """
 
 import numpy as np
@@ -149,20 +149,20 @@ class CentralSpin(object):
 
 params = dict()
 params = {
-          "N": 3,
+          "N": 4,
           "c": [0,1],
-          "omega": [2.0*1e6,10.0*1e6,6.0*1e6,2.0*1e6,4.6*1e6,3.4*1e6,2.2*1e6,1.0*1e6],
+          "omega": [2500*1e3,10000*1e3,8500*1e3,7000*1e3,5500*1e3,4000*1e3,2500*1e3,1000*1e3],
           "A": [1.20*1e6,1.18*1e6,1.16*1e6,1.14*1e6,1.12*1e6,1.10*1e6,1.08*1e6],
           "n": 1,
-          "T": 10e-6,
-          "dt": 10e-8,
+          "T": 40e-6,
+          "dt": 40e-9,
           "option": 'U'
           }
 
 c_init = qt.ket2dm(params['c'][0]*qt.basis(2,0)+params['c'][1]*qt.basis(2,1))
 env_init = tensor_power(qt.ket2dm(qt.basis(2,0)), params['N'])  # (2,0) is ground state
 
-find='1'  # 1 for changing initial electron state, 2 for finding omega0
+find='2'  # 1 for changing initial electron state, 2 for finding omega0
 
 if find=='1':
     model = CentralSpin(params, params['omega'][0], c_init, env_init)
@@ -174,14 +174,36 @@ if find=='1':
     
     # plot fidelity
     count = params['omega'][0] * model.tlist
-    fig = plt.figure(figsize=(8,6))
+    fig = plt.figure(figsize=(10,6))
     l1, = plt.plot(count, fid[0])
     l2, = plt.plot(count, fid[1])
     l3, = plt.plot(count, fid[2])
     l4, = plt.plot(count, fid[3])
-    plt.legend(handles=[l1, l2, l3, l4, ], 
-               labels=['electron', 'nucleus 1', 'nuclues 2', 'nuclues 3'], 
+    l5, = plt.plot(count, fid[4])
+#    l6, = plt.plot(count, fid[5])
+#    l7, = plt.plot(count, fid[6])
+#    l8, = plt.plot(count, fid[7])
+
+#    plt.legend(handles=[l1, l2, l3, l4, ], 
+#               labels=['electron', 'nucleus 1', 'nucleus 2', 'nucleus 3'], 
+#               loc='center right', fontsize=16)
+    plt.legend(handles=[l1, l2, l3, l4, l5, ], 
+               labels=['electron', 'nucleus 1', 'nucleus 2', 'nucleus 3', 
+                       'nucleus 4'], 
                loc='center right', fontsize=16)
+#    plt.legend(handles=[l1, l2, l3, l4, l5, l6, ], 
+#               labels=['electron', 'nucleus 1', 'nucleus 2', 'nucleus 3', 
+#                       'nucleus 4', 'nucleus 5', ], 
+#               loc='center right', fontsize=16)
+#    plt.legend(handles=[l1, l2, l3, l4, l5, l6, l7, ], 
+#               labels=['electron', 'nucleus 1', 'nucleus 2', 'nucleus 3', 
+#                       'nucleus 4', 'nucleus 5', 'nucleus 6', ], 
+#               loc='center right', fontsize=16)
+#    plt.legend(handles=[l1, l2, l3, l4, l5, l6, l7, l8, ], 
+#               labels=['electron', 'nucleus 1', 'nucleus 2', 'nucleus 3', 
+#                       'nucleus 4', 'nucleus 5', 'nucleus 6', 'nucleus 7'], 
+#               loc='center right', fontsize=16)    
+    
     plt.xlabel(r'$\omega t$', fontsize=16)
     plt.ylabel('fidelity', fontsize=16)
     plt.xticks(fontsize=14)
@@ -189,12 +211,12 @@ if find=='1':
     plt.title('$F-t$', fontsize=20)
 
 elif find=='2':
-    omega0_list = np.arange(1.0*1e6, 12.0*1e6, 0.1*1e6)
-    fidm_e, fidm_1, fidm_2, fidm_3 = [], [], [], []  # fid max
-    fidmw_e, fidmw_1, fidmw_2, fidmw_3 = 2.0, 2.0, 2.0, 2.0  # omega0 giving fid max
+    omega0_list = np.arange(0.1*1e6, 11.1*1e6, 0.1*1e6)
+    fidm_e, fidm_1, fidm_2, fidm_3, fidm_4 = [], [], [], [], []  # fid max
+    fidmw_e, fidmw_1, fidmw_2, fidmw_3, fidmw_4 = 2.0, 2.0, 2.0, 2.0, 2.0  # omega0 giving fid max
     for omega0 in omega0_list:
         model = CentralSpin(params, omega0, c_init, env_init)
-        Ham, Ham_r = model.ham()
+        Ham, Ham_r, Ham_tar = model.ham()
         states, state_list = model.evolve(Ham)
         fid = model.fid(state_list)
         
@@ -202,6 +224,10 @@ elif find=='2':
         fidm_1.append(max(fid[1]))
         fidm_2.append(max(fid[2]))
         fidm_3.append(max(fid[3]))
+        fidm_4.append(max(fid[4]))
+#        fidm_5.append(max(fid[5]))
+#        fidm_6.append(max(fid[6]))
+#        fidm_7.append(max(fid[7]))
         
         if len(fidm_e)>=2:
             if fidm_e[-1]>max(fidm_e[:-1]):
@@ -212,6 +238,14 @@ elif find=='2':
                 fidmw_2 = omega0 * 1e-6
             if fidm_3[-1]>max(fidm_3[:-1]):
                 fidmw_3 = omega0 * 1e-6
+            if fidm_4[-1]>max(fidm_4[:-1]):
+                fidmw_4 = omega0 * 1e-6
+#            if fidm_5[-1]>max(fidm_5[:-1]):
+#                fidmw_5 = omega0 * 1e-6
+#            if fidm_6[-1]>max(fidm_6[:-1]):
+#                fidmw_6 = omega0 * 1e-6
+#            if fidm_7[-1]>max(fidm_7[:-1]):
+#                fidmw_7 = omega0 * 1e-6
         
         #exp_x, exp_y, exp_z = model.expect(state_list)
         
@@ -233,18 +267,40 @@ elif find=='2':
         l2, = plt.plot(count, fid[1])
         l3, = plt.plot(count, fid[2])
         l4, = plt.plot(count, fid[3])
-        plt.legend(handles=[l1, l2, l3, l4, ], 
-                   labels=['electron', 'nucleus 1', 'nuclues 2', 'nuclues 3'], 
+        l5, = plt.plot(count, fid[4])
+#        l6, = plt.plot(count, fid[5])
+#        l7, = plt.plot(count, fid[6])
+#        l8, = plt.plot(count, fid[7])
+        
+#        plt.legend(handles=[l1, l2, l3, l4, ], 
+#                   labels=['electron', 'nucleus 1', 'nucleus 2', 'nucleus 3'], 
+#                   loc='center right', fontsize=16)
+        plt.legend(handles=[l1, l2, l3, l4, l5, ], 
+                   labels=['electron', 'nucleus 1', 'nucleus 2', 'nucleus 3', 
+                           'nucleus 4', ], 
                    loc='center right', fontsize=16)
+#        plt.legend(handles=[l1, l2, l3, l4, l5, l6, ], 
+#                   labels=['electron', 'nucleus 1', 'nucleus 2', 'nucleus 3', 
+#                           'nucleus 4', 'nucleus 5', ], 
+#                   loc='center right', fontsize=16)
+#        plt.legend(handles=[l1, l2, l3, l4, l5, l6, l7, ], 
+#                   labels=['electron', 'nucleus 1', 'nucleus 2', 'nucleus 3', 
+#                           'nucleus 4', 'nucleus 5', 'nucleus 6', ], 
+#                   loc='center right', fontsize=16)
+#        plt.legend(handles=[l1, l2, l3, l4, l5, l6, l7, l8, ], 
+#                   labels=['electron', 'nucleus 1', 'nucleus 2', 'nucleus 3', 
+#                           'nucleus 4', 'nucleus 5', 'nucleus 6', 'nucleus 7'], 
+#                   loc='center right', fontsize=16)        
+        
         plt.xlabel(r'$\omega t$', fontsize=16)
         plt.ylabel('fidelity', fontsize=16)
         plt.xticks(fontsize=14)
         plt.yticks(fontsize=14)
         plt.title(r'$ F-t, \omega_0=%.1f \times 10^6 rad/s$'%(omega0*1e-6), fontsize=20)
-        plt.savefig(r'D:\transfer\trans_code\results_qd\grad\group2\%.1f.png'%(omega0*1e-6))
+        plt.savefig(r'D:\transfer\trans_code\results_qd\grad\N=4\%.1f.png'%(omega0*1e-6))  #改N
     
     
-    print("fidmw:", fidmw_e, fidmw_1, fidmw_2, fidmw_3)
+    print("fidmw:", fidmw_e, fidmw_1, fidmw_2, fidmw_3, fidmw_4)
     
     omega0_list_ = [i*1e-6 for i in omega0_list]
     fig = plt.figure(figsize=(8,6))
@@ -252,44 +308,35 @@ elif find=='2':
     l2, = plt.plot(omega0_list_, fidm_1)
     l3, = plt.plot(omega0_list_, fidm_2)
     l4, = plt.plot(omega0_list_, fidm_3)
-    plt.legend(handles=[l1, l2, l3, l4, ],
-              labels=['electron', 'nucleus 1', 'nucleus 2', 'nucleus 3'], 
+    l5, = plt.plot(omega0_list_, fidm_4)
+#    l6, = plt.plot(omega0_list_, fidm_5)
+#    l7, = plt.plot(omega0_list_, fidm_6)
+#    l8, = plt.plot(omega0_list_, fidm_7)
+    
+#    plt.legend(handles=[l1, l2, l3, l4, ], 
+#                   labels=['electron', 'nucleus 1', 'nucleus 2', 'nucleus 3'], 
+#                   loc='upper right', fontsize=16)
+    plt.legend(handles=[l1, l2, l3, l4, l5, ],
+              labels=['electron', 'nucleus 1', 'nucleus 2', 'nucleus 3', 
+                      'nucleus 4', ], 
               loc='upper right', fontsize=16)
+#    plt.legend(handles=[l1, l2, l3, l4, l5, l6, ], 
+#               labels=['electron', 'nucleus 1', 'nucleus 2', 'nucleus 3', 
+#                       'nucleus 4', 'nucleus 5', ], 
+#               loc='upper right', fontsize=16)
+#    plt.legend(handles=[l1, l2, l3, l4, l5, l6, l7, ], 
+#               labels=['electron', 'nucleus 1', 'nucleus 2', 'nucleus 3', 
+#                       'nucleus 4', 'nucleus 5', 'nucleus 6', ], 
+#               loc='upper right', fontsize=16)
+#    plt.legend(handles=[l1, l2, l3, l4, l5, l6, l7, l8, ], 
+#               labels=['electron', 'nucleus 1', 'nucleus 2', 'nucleus 3', 
+#                       'nucleus 4', 'nucleus 5', 'nucleus 6', 'nucleus 7'], 
+#               loc='upper right', fontsize=16)  
+    
     plt.xlabel('$\omega_0 (*10^6 rad/s)$', fontsize=16)
     plt.ylabel('Maximal fidelity', fontsize=16)
     plt.xticks(fontsize=14)
     plt.yticks(fontsize=14)
     plt.title('Maximal fidelity $- \omega_0$', fontsize=20)
-    plt.savefig(r'D:\transfer\trans_code\results_qd\grad\fidmax3.png')
+    plt.savefig(r'D:\transfer\trans_code\results_qd\grad\N=4\fidmax.png')
 
-# plot expectation
-#fig, ax = plt.subplots(figsize=(8,6))
-# sigmax
-#ax.plot(count, exp_x[0][0], label=r'$\langle \sigma_x \rangle$ on central spin')
-#for i in range(1,int(params['N']+1)):
-#    ax.plot(count, exp_x[i][0].T, label=r'$\langle \sigma_x \rangle$ on bath spin %d'%i)
-# sigmay
-#ax.plot(count, exp_y[0][0], label=r'$\langle \sigma_y \rangle$ on central spin')
-#for i in range(1,int(params['N']+1)):
-#    ax.plot(count, exp_y[i][0], label=r'$\langle \sigma_y \rangle$ on bath spin %d'%i)
-#ax.plot(count, exp_x[0][0], label=r'$\langle \sigma_x \rangle, \langle \sigma_y \rangle$ on each spin')
-# sigmaz
-#ax.plot(count, exp_z[0][0], label=r'$\langle \sigma_z \rangle$ on central spin')
-#for i in range(1,int(params['N']+1)):
-#    ax.plot(count, exp_z[i][0], label=r'$\langle \sigma_z \rangle$ on bath spin %d'%i)
-#ax.plot(count, exp_z[1][0], label=r'$\langle \sigma_z \rangle$ on each bath spin')
-
-#ax.legend(fontsize=9, loc='upper right')
-#ax.set_xlabel(r'$\omega t$', fontsize=12)
-#ax.set_ylabel(r'$\langle \sigma_i \rangle$', fontsize=12)
-#ax.set_title(r'$ \langle \sigma_i \rangle-t, N=%d $'%params['N'], fontsize=16)
-
-
-#plt.figure(figsize=(8,6))
-#plt.plot(count, exp_x[0][0], label=r'$\langle \sigma_x \rangle, \langle \sigma_y \rangle$ on each spin')
-#plt.plot(count, exp_z[0][0], label=r'$\langle \sigma_z \rangle$ on central spin')
-#for i in range(1,int(params['N']+1)):
-#    plt.plot(count, exp_z[i][0], label=r'$\langle \sigma_z \rangle$ on bath spin %d'%i)
-#plt.xlabel(r'$t$', fontsize=12)
-#plt.ylabel(r'$\langle \sigma_i \rangle$', fontsize=12)
-#plt.title(r'$ \langle \sigma_i \rangle-t, N=%d $'%params['N'], fontsize=16)
