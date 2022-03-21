@@ -154,8 +154,8 @@ params = {
           "omega": [2500*1e3,10000*1e3,8500*1e3,7000*1e3,5500*1e3,4000*1e3,2500*1e3,1000*1e3],
           "A": [1.20*1e6,1.18*1e6,1.16*1e6,1.14*1e6,1.12*1e6,1.10*1e6,1.08*1e6],
           "n": 1,
-          "T": 40e-6,
-          "dt": 40e-9,
+          "T": 20e-6,
+          "dt": 20e-9,
           "option": 'U'
           }
 
@@ -212,8 +212,35 @@ if find=='1':
 
 elif find=='2':
     omega0_list = np.arange(0.1*1e6, 11.1*1e6, 0.1*1e6)
-    fidm_e, fidm_1, fidm_2, fidm_3, fidm_4 = [], [], [], [], []  # fid max
-    fidmw_e, fidmw_1, fidmw_2, fidmw_3, fidmw_4 = 2.0, 2.0, 2.0, 2.0, 2.0  # omega0 giving fid max
+    
+#    fidm_e, fidm_1, fidm_2, fidm_3, fidm_4 = [], [], [], [], []  # fid max
+    fidm_e = []  # fid max
+    fidm_1 = []
+    fidm_2 = []
+    fidm_3 = []
+    fidm_4 = []
+#    fidm_5 = []
+#    fidm_6 = []
+#    fidm_7 = []
+    
+#    fidmw_e, fidmw_1, fidmw_2, fidmw_3, fidmw_4 = 2.0, 2.0, 2.0, 2.0, 2.0  # omega0 giving fid max
+    fidmw_e = 2.0  # omega0 giving fid max
+    fidmw_1 = 2.0
+    fidmw_2 = 2.0
+    fidmw_3 = 2.0
+    fidmw_4 = 2.0
+#    fidmw_5 = 2.0
+#    fidmw_6 = 2.0
+#    fidmw_7 = 2.0
+    
+    fidma_1 = [0 for i in range(int(params['N']))] # fidelities of all nuclei at climax
+    fidma_2 = [0 for i in range(int(params['N']))]
+    fidma_3 = [0 for i in range(int(params['N']))]
+    fidma_4 = [0 for i in range(int(params['N']))]
+#    fidma_5 = [0 for i in range(int(params['N'])-1)]
+#    fidma_6 = [0 for i in range(int(params['N'])-1)]
+#    fidma_7 = [0 for i in range(int(params['N'])-1)]
+    
     for omega0 in omega0_list:
         model = CentralSpin(params, omega0, c_init, env_init)
         Ham, Ham_r, Ham_tar = model.ham()
@@ -234,18 +261,70 @@ elif find=='2':
                 fidmw_e = omega0 * 1e-6
             if fidm_1[-1]>max(fidm_1[:-1]):
                 fidmw_1 = omega0 * 1e-6
+                fidma_1[0] = fidm_1[-1]
+                fidma_1[1] = fidm_2[-1]
+                fidma_1[2] = fidm_3[-1]
+                fidma_1[3] = fidm_4[-1]
+#                fidma_1[4] = fidm_5[-1]
+#                fidma_1[5] = fidm_6[-1]
+#                fidma_1[6] = fidm_7[-1]
             if fidm_2[-1]>max(fidm_2[:-1]):
                 fidmw_2 = omega0 * 1e-6
+                fidma_2[0] = fidm_1[-1]
+                fidma_2[1] = fidm_2[-1]
+                fidma_2[2] = fidm_3[-1]
+                fidma_2[3] = fidm_4[-1]
+#                fidma_2[4] = fidm_5[-1]
+#                fidma_2[5] = fidm_6[-1]
+#                fidma_2[6] = fidm_7[-1]
             if fidm_3[-1]>max(fidm_3[:-1]):
                 fidmw_3 = omega0 * 1e-6
+                fidma_3[0] = fidm_1[-1]
+                fidma_3[1] = fidm_2[-1]
+                fidma_3[2] = fidm_3[-1]
+                fidma_3[3] = fidm_4[-1]
+#                fidma_3[4] = fidm_5[-1]
+#                fidma_3[5] = fidm_6[-1]
+#                fidma_3[6] = fidm_7[-1]
             if fidm_4[-1]>max(fidm_4[:-1]):
                 fidmw_4 = omega0 * 1e-6
+                fidma_4[0] = fidm_1[-1]
+                fidma_4[1] = fidm_2[-1]
+                fidma_4[2] = fidm_3[-1]
+                fidma_4[3] = fidm_4[-1]
+#                fidma_4[4] = fidm_5[-1]
+#                fidma_4[5] = fidm_6[-1]
+#                fidma_4[6] = fidm_7[-1]
+                
 #            if fidm_5[-1]>max(fidm_5[:-1]):
 #                fidmw_5 = omega0 * 1e-6
+#                fidma_5[0] = fidm_1[-1]
+#                fidma_5[1] = fidm_2[-1]
+#                fidma_5[2] = fidm_3[-1]
+#                fidma_5[3] = fidm_4[-1]
+#                fidma_5[4] = fidm_5[-1]
+#                fidma_5[5] = fidm_6[-1]
+#                fidma_5[6] = fidm_7[-1]
+                
 #            if fidm_6[-1]>max(fidm_6[:-1]):
 #                fidmw_6 = omega0 * 1e-6
+#                fidma_6[0] = fidm_1[-1]
+#                fidma_6[1] = fidm_2[-1]
+#                fidma_6[2] = fidm_3[-1]
+#                fidma_6[3] = fidm_4[-1]
+#                fidma_6[4] = fidm_5[-1]
+#                fidma_6[5] = fidm_6[-1]
+#                fidma_6[6] = fidm_7[-1]
+                
 #            if fidm_7[-1]>max(fidm_7[:-1]):
 #                fidmw_7 = omega0 * 1e-6
+#                fidma_7[0] = fidm_1[-1]
+#                fidma_7[1] = fidm_2[-1]
+#                fidma_7[2] = fidm_3[-1]
+#                fidma_7[3] = fidm_4[-1]
+#                fidma_7[4] = fidm_5[-1]
+#                fidma_7[5] = fidm_6[-1]
+#                fidma_7[6] = fidm_7[-1]
         
         #exp_x, exp_y, exp_z = model.expect(state_list)
         
@@ -300,7 +379,7 @@ elif find=='2':
         plt.savefig(r'D:\transfer\trans_code\results_qd\grad\N=4\%.1f.png'%(omega0*1e-6))  #改N
     
     
-    print("fidmw:", fidmw_e, fidmw_1, fidmw_2, fidmw_3, fidmw_4)
+#    print("fidmw:", fidmw_e, fidmw_1, fidmw_2, fidmw_3, fidmw_4)
     
     omega0_list_ = [i*1e-6 for i in omega0_list]
     fig = plt.figure(figsize=(8,6))
@@ -315,23 +394,23 @@ elif find=='2':
     
 #    plt.legend(handles=[l1, l2, l3, l4, ], 
 #                   labels=['electron', 'nucleus 1', 'nucleus 2', 'nucleus 3'], 
-#                   loc='upper right', fontsize=16)
+#                   loc='best', fontsize=16)
     plt.legend(handles=[l1, l2, l3, l4, l5, ],
               labels=['electron', 'nucleus 1', 'nucleus 2', 'nucleus 3', 
                       'nucleus 4', ], 
-              loc='upper right', fontsize=16)
+              loc='best', fontsize=16)
 #    plt.legend(handles=[l1, l2, l3, l4, l5, l6, ], 
 #               labels=['electron', 'nucleus 1', 'nucleus 2', 'nucleus 3', 
 #                       'nucleus 4', 'nucleus 5', ], 
-#               loc='upper right', fontsize=16)
+#               loc='best', fontsize=16)
 #    plt.legend(handles=[l1, l2, l3, l4, l5, l6, l7, ], 
 #               labels=['electron', 'nucleus 1', 'nucleus 2', 'nucleus 3', 
 #                       'nucleus 4', 'nucleus 5', 'nucleus 6', ], 
-#               loc='upper right', fontsize=16)
+#               loc='best', fontsize=16)
 #    plt.legend(handles=[l1, l2, l3, l4, l5, l6, l7, l8, ], 
 #               labels=['electron', 'nucleus 1', 'nucleus 2', 'nucleus 3', 
 #                       'nucleus 4', 'nucleus 5', 'nucleus 6', 'nucleus 7'], 
-#               loc='upper right', fontsize=16)  
+#               loc='best', fontsize=16)  
     
     plt.xlabel('$\omega_0 (*10^6 rad/s)$', fontsize=16)
     plt.ylabel('Maximal fidelity', fontsize=16)
