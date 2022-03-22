@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 @author: Xiaoxu Zhou
-Latest update: 03/15/2022
+Latest update: 03/22/2022
 """
 
 import numpy as np
@@ -23,7 +23,6 @@ class QDSystem(object):
         self.N = int(params['N'])
         self.omega = params['omega']
         self.omegad = params['omegad']
-        self.tau = params['tau']
         self.A = params['A']
         self.mu = params['mu']
         self.Bac = params['Bac']
@@ -56,71 +55,61 @@ class QDSystem(object):
             A: the list of coupling strengths between central and env spin
         """
         zero = qt.ket2dm(qt.Qobj(np.zeros((2, 1))))
-        zeroN = tensor_power(zero, self.N)
-        zeroN1 = tensor_power(zero, self.N+1)
         sigmax0 = qt.tensor([qt.sigmax(), tensor_power(qt.qeye(2), self.N)])
         sigmay0 = qt.tensor([qt.sigmay(), tensor_power(qt.qeye(2), self.N)])
         sigmaz0 = qt.tensor([qt.sigmaz(), tensor_power(qt.qeye(2), self.N)])
+        tr = 1e-6
         
-        # electron term in Hamiltonian
-        Ham_e = 0.5 * self.omega[0] * sigmaz0
-        Ham_e_r = 0.5 * (self.omega[0]-self.omegad) * sigmaz0
+        # operator acting on the electron
+        H_e = 0.5 * self.omega[0] * sigmaz0
         
-        # environment term in Hamiltonian
-        Ham_env = zeroN
-        Ham_env_r = zeroN
+        # operator acting on the electron in RWA
+        H_e_r = 0.5 * (self.omega[0] - self.omegad) * sigmaz0
+
+        # operator acting on each nucleus
+        H_env = tensor_power(zero, self.N)
         for i in range(1,self.N+1):
-            Ham_env += 0.5 * self.omega[i] * sigmazi(i, self.N)
-            Ham_env_r += 0.5 * (self.omega[i]-self.omegad) * sigmazi(i, self.N)
-        Ham_env = qt.tensor([qt.qeye(2), Ham_env])
-        Ham_env_r = qt.tensor([qt.qeye(2), Ham_env_r])
+            H_env += 0.5 * self.omega[i] * sigmazi(i, self.N)
+        H_env = qt.tensor([qt.qeye(2), H_env])
         
-        # interaction term in Hamiltonian
-        Ham_int = zeroN1
-        Ham_int_r = zeroN1
+        # interaction term
+        H_int = tensor_power(zero, self.N+1)
         ## general form
 #        for i in range(1,self.N+1):
-#            Ham_int += 1/4 * self.A[i-1] * \
-#                       (sigmax0 * sigmaxi(i, self.N) + \
-#                        sigmay0 * sigmayi(i, self.N) + \
-#                        sigmaz0 * sigmazi(i, self.N))
+#            H_int += 1/4 * self.A[i-1] * \
+#                     (qt.tensor([qt.sigmax(), sigmaxi(i, self.N)]) + \
+#                      qt.tensor([qt.sigmay(), sigmayi(i, self.N)]) + \
+#                      qt.tensor([qt.sigmaz(), sigmazi(i, self.N)]))
         ## neglect zz interaction
         for i in range(1,self.N+1):
-            Ham_int += 1/4 * self.A[i-1] * \
-                       (sigmax0 * sigmaxi(i, self.N+1) + \
-                        sigmay0 * sigmayi(i, self.N+1))
-            Ham_int_r += 1/4 * self.A[i-1] * \
-                         (np.cos(self.omega[0]-self.omega[i]) * (sigmax0*sigmaxi(i,self.N+1) + sigmay0*sigmayi(i,self.N+1)) + \
-                          np.sin(self.omega[0]-self.omega[i]) * (sigmax0*sigmayi(i,self.N+1) - sigmay0*sigmaxi(i,self.N+1)))
+            H_int += 1/4* self.A[i-1] * \
+                     (qt.tensor([qt.sigmax(), sigmaxi(i, self.N)]) + \
+                      qt.tensor([qt.sigmay(), sigmayi(i, self.N)]))
         
-        # control term in Hamiltonian
-        Ham_cx = zeroN1
-        Ham_cx_r = zeroN1
-        Ham_cy = zeroN1
-        Ham_cy_r = zeroN1
-        Ham_cz = zeroN1
-        Ham_cz_r = zeroN1
-        for i in range(1,self.N+2):
-            Ham_cx += 2 * self.mu * self.Bac * sigmaxi(i,self.N+1) * np.cos(self.omegad * self.tau)
-            Ham_cx_r += self.mu * self.Bac * sigmaxi(i,self.N+1)
-            Ham_cy += 2 * self.mu * self.Bac * sigmayi(i,self.N+1) * np.cos(self.omegad * self.tau)
-            Ham_cy_r += self.mu * self.Bac * sigmayi(i,self.N+1)
-            Ham_cz += 2 * self.mu * self.Bac * sigmazi(i,self.N+1) * np.cos(self.omegad * self.tau)
-            Ham_cz_r += self.mu * self.Bac * sigmazi(i,self.N+1)
+        # interaction term in RWA
+        H_int_r = tensor_power(zero, self.N+1)
+        for i in range(1,self.N+1):
+            H_int_r += 1/4 * self.A[i-1] * \
+                      (np.cos(self.omegad * tr) * (sigmax0 * sigmaxi(i,self.N+1) + sigmay0 * sigmayi(i,self.N+1)) + \
+                       np.sin(self.omegad * tr) * (sigmax0 * sigmayi(i,self.N+1) - sigmax0 * sigmayi(i,self.N+1)) + \
+                       sigmaz0 * sigmazi(i,self.N+1))
+        
+        # control term
+        H_c = 2 * self.mu * self.Bac * sigmaxi(i, self.N+1) * np.cos(self.omegad * tr)
+        
+        # control term in RWA
+        H_c_r = tensor_power(zero, self.N+1)
+        for i in range(1,self.N+1):
+            H_c_r += self.mu * self.Bac * sigmaxi(i, self.N+1)    
+        
+        # control term only on the electron in RWA
+        H_ce_r = self.mu * self.Bac * sigmax0
         
         # total Hamiltonian
-        Ham_free = Ham_e + Ham_env + Ham_int
-        Ham_1x = Ham_e + Ham_env + Ham_int + Ham_cx
-        Ham_1y = Ham_e + Ham_env + Ham_int + Ham_cy
-        Ham_1z = Ham_e + Ham_env + Ham_int + Ham_cz
-        Ham_2x = Ham_e_r + Ham_env_r + Ham_int_r + Ham_cx_r
-        Ham_2y = Ham_e_r + Ham_env_r + Ham_int_r + Ham_cy_r
-        Ham_2z = Ham_e_r + Ham_env_r + Ham_int_r + Ham_cz_r
-        Ham_3x = Ham_int_r + Ham_cx_r
-        Ham_3y = Ham_int_r + Ham_cy_r
-        Ham_3z = Ham_int_r + Ham_cz_r
-                
-        return Ham_free, Ham_1x, Ham_1y, Ham_1z, Ham_2x, Ham_2y, Ham_2z, Ham_3x, Ham_3y, Ham_3z
+        H_free = H_e + H_env + H_int
+        H_c = H_e + H_env + H_int + H_c
+        
+        return H_free, H_c
 
 
 class Evolve(object):
@@ -299,13 +288,12 @@ params = dict()
 params = {
           "N": 4,
           "omega": [1e6,1e6,1e6,1e6,1e6,1e6,1e6],
-          "omegad": 1e6,
-          "tau": 0.8*1e-6,
+          "omegad": 1*2*np.pi,
           "A": [5.6*1e6,1.9*1e6,1.2*1e6,1e6,1e6,1e6,1e6],
           "mu": 1,
           "Bac": 1,
-          "T": 5e-5,
-          "dt": 8e-8,
+          "T": 2e-6,
+          "dt": 2e-9,
           "option": 'U'
           }
 
@@ -313,31 +301,25 @@ params = {
 c_init = qt.ket2dm(qt.basis(2, 0))
 env_init = tensor_power(qt.ket2dm(qt.basis(2, 1)), params['N'])  # alternative
 model = QDSystem(params, c_init, env_init)
-H_free, H_1x, H_1y, H_1z, H_2x, H_2y, H_2z, H_3x, H_3y, H_3z= model.ham()
+Ham, Ham_r = model.ham()
 
-endstate1, state_list1 = Evolve.free(H_free, model.rho_init, model.N, 1/3*model.T, model.dt)
+endstate1, state_list1 = Evolve.free(Ham, model.rho_init, model.N, 1/3*model.T, model.dt)
 fid1 = Calculate.fid(model.N, model.env_tar, state_list1)
 exp_x1, exp_y1, exp_z1 = Calculate.expect(model.N, state_list1)
 
 endstate2, state_list2 = Evolve.rot(endstate1, model.N, 'z', np.pi)
 fid2 = Calculate.fidr(model.N, model.env_tar, state_list2)
 exp_x2, exp_y2, exp_z2 = Calculate.expectr(model.N, state_list2)
-#endstate2, state_list2 = Evolve.free(H_3z, endstate1, model.N, model.tau, model.dt)
-#fid2 = Calculate.fid(model.N, model.env_tar, state_list2)
-#exp_x2, exp_y2, exp_z2 = Calculate.expect(model.N, state_list2)
 
-endstate3, state_list3 = Evolve.free(H_free, endstate2, model.N, 1/3*model.T, model.dt)
+endstate3, state_list3 = Evolve.free(Ham, endstate2, model.N, 1/3*model.T, model.dt)
 fid3 = Calculate.fid(model.N, model.env_tar, state_list3)
 exp_x3, exp_y3, exp_z3 = Calculate.expect(model.N, state_list3)
 
 endstate4, state_list4 = Evolve.rot(endstate3, model.N, 'z', np.pi)
 fid4 = Calculate.fidr(model.N, model.env_tar, state_list4)
 exp_x4, exp_y4, exp_z4 = Calculate.expectr(model.N, state_list4)
-#endstate4, state_list4 = Evolve.free(H_3z, endstate3, model.N, model.tau, model.dt)
-#fid4 = Calculate.fid(model.N, model.env_tar, state_list4)
-#exp_x4, exp_y4, exp_z4 = Calculate.expect(model.N, state_list4)
 
-endstate5, state_list5 = Evolve.free(H_free, endstate4, model.N, 1/3*model.T, model.dt)
+endstate5, state_list5 = Evolve.free(Ham, endstate4, model.N, 1/3*model.T, model.dt)
 fid5 = Calculate.fid(model.N, model.env_tar, state_list5)
 exp_x5, exp_y5, exp_z5 = Calculate.expect(model.N, state_list5)
 
@@ -346,40 +328,6 @@ exp_x5, exp_y5, exp_z5 = Calculate.expect(model.N, state_list5)
 count = params['omega'][0] * model.tlist
 
 Calculate.plot(count[:int(1/3*len(model.tlist))+2], fid1, model.N)
-#Calculate.plot(count[:int(model.tau/model.dt)+1], fid2, model.N)
 Calculate.plot(count[:int(1/3*len(model.tlist))+2], fid3, model.N)
-#Calculate.plot(count[:int(model.tau/model.dt)+1], fid4, model.N)
 Calculate.plot(count[:int(1/3*len(model.tlist))+2], fid5, model.N)
 
-
-# plot expectation
-fig, ax = plt.subplots(figsize=(8,6))
-# sigmax
-#ax.plot(count, exp_x1[0][0], label=r'$\langle \sigma_x \rangle$ on central spin')
-#for i in range(1,int(params['N']+1)):
-#    ax.plot(count, exp_x1[i][0].T, label=r'$\langle \sigma_x \rangle$ on bath spin %d'%i)
-# sigmay
-#ax.plot(count, exp_y1[0][0], label=r'$\langle \sigma_y \rangle$ on central spin')
-#for i in range(1,int(params['N']+1)):
-#    ax.plot(count, exp_y1[i][0], label=r'$\langle \sigma_y \rangle$ on bath spin %d'%i)
-#ax.plot(count, exp_x1[0][0], label=r'$\langle \sigma_x \rangle, \langle \sigma_y \rangle$ on each spin')
-# sigmaz
-ax.plot(count[:int(1/3*len(model.tlist))+2], exp_z3[0][0], label=r'$\langle \sigma_z \rangle$ on central spin')
-for i in range(1,int(params['N']+1)):
-    ax.plot(count[:int(1/3*len(model.tlist))+2], exp_z1[i][0], label=r'$\langle \sigma_z \rangle$ on bath spin %d'%i)
-ax.plot(count[:int(1/3*len(model.tlist))+2], exp_z3[1][0], label=r'$\langle \sigma_z \rangle$ on each bath spin')
-
-ax.legend(fontsize=9, loc='upper right')
-ax.set_xlabel(r'$\omega t$', fontsize=12)
-ax.set_ylabel(r'$\langle \sigma_i \rangle$', fontsize=12)
-ax.set_title(r'$ \langle \sigma_i \rangle-t, N=%d $'%params['N'], fontsize=16)
-
-
-#plt.figure(figsize=(8,6))
-#plt.plot(count, exp_x1[0][0], label=r'$\langle \sigma_x \rangle, \langle \sigma_y \rangle$ on each spin')
-#plt.plot(count, exp_z1[0][0], label=r'$\langle \sigma_z \rangle$ on central spin')
-#for i in range(1,int(params['N']+1)):
-#    plt.plot(count, exp_z1[i][0], label=r'$\langle \sigma_z \rangle$ on bath spin %d'%i)
-#plt.xlabel(r'$t$', fontsize=12)
-#plt.ylabel(r'$\langle \sigma_i \rangle$', fontsize=12)
-#plt.title(r'$ \langle \sigma_i \rangle-t, N=%d $'%params['N'], fontsize=16)
