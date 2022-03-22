@@ -131,20 +131,19 @@ class Evolve(object):
 #        print('state_list:', len(state_list[0]))
         return evol.states[-1], state_list
     
-    def rot(state, N, axis, phi):
+    def rot0(state, N, axis, phi):
         """
         The whole system rotates angle phi around axis-x, or -y, or -z
         The system consists of 1 electron and N nuclei
+        Rotate each spin one by one
         """
         spin = []
         if axis=='x':
             for i in range(0,N+1):
                 spin.append(qt.rx(phi) * qt.ptrace(state,i))
-#            print('spin:', spin)    
             state_ = spin[0]
             for i in range(1,N+1):
                 state_ = qt.tensor([state_, spin[i]])
-#            print('state_:', state_)
         
         elif axis=='y':
             for i in range(0,N+1):
@@ -164,6 +163,31 @@ class Evolve(object):
             print('Undefined axis')
         
         return state_, spin
+    
+    def rot(state, N, axis, phi):
+        """
+        The whole system rotates angle phi around axis-x, or -y, or -z
+        The system consists of 1 electron and N nuclei
+        Rotate all the spins using tensor product of rotation operator
+        """
+        rx_ = tensor_power(qt.rx(phi), int(N+1))
+        ry_ = tensor_power(qt.ry(phi), int(N+1))
+        rz_ = tensor_power(qt.rz(phi), int(N+1))
+        
+        if axis=='x':
+            state = rx_ * state
+        elif axis=='y':
+            state = ry_ * state
+        elif axis=='z':
+            state = rz_ * state
+        else:
+            print('Undefined axis')
+        
+        spin = []
+        for i in range(0,N+1):
+            spin.append(qt.ptrace(state,i))
+            
+        return state, spin
         
     def rect(axis, omega, deltat):
         """
@@ -237,7 +261,6 @@ class Calculate(object):
         
         return fid2
     
-    
     def expect(N, state_list):
         """
         Calculate expectation values of observable sigma_x, sigma_y, sigma_z
@@ -275,10 +298,10 @@ class Calculate(object):
             N: N nuclei
         """
         fig, ax = plt.subplots(figsize=(8,6))
-        ax.plot(count, fid[0], label='central spin')
+        ax.plot(count, fid[0], label='electron')
         for i in range(1, int(N)+1):
-            ax.plot(count, fid[i], label='bath spin %d'%i)
-        ax.legend(fontsize=16, loc='upper right')
+            ax.plot(count, fid[i], label='nucleus %d'%i)
+        ax.legend(fontsize=16, loc='center right')
         ax.set_xlabel(r'$\omega t$', fontsize=16)
         ax.set_ylabel('fidelity', fontsize=16)
         ax.set_title(r'$ F-t, N=%d $'%N, fontsize=18)
@@ -287,13 +310,13 @@ class Calculate(object):
 params = dict()
 params = {
           "N": 4,
-          "omega": [1e6,1e6,1e6,1e6,1e6,1e6,1e6],
+          "omega": [8500*1e3,10000*1e3,8500*1e3,7000*1e3,5500*1e3,4000*1e3,2500*1e3,1000*1e3],
           "omegad": 1*2*np.pi,
-          "A": [5.6*1e6,1.9*1e6,1.2*1e6,1e6,1e6,1e6,1e6],
+          "A": [1*1e6,1*1e6,1*1e6,1*1e6,1.12*1e6,1.10*1e6,1.08*1e6],
           "mu": 1,
           "Bac": 1,
-          "T": 2e-6,
-          "dt": 2e-9,
+          "T": 20e-6,
+          "dt": 20e-9,
           "option": 'U'
           }
 
@@ -307,15 +330,18 @@ endstate1, state_list1 = Evolve.free(Ham, model.rho_init, model.N, 1/3*model.T, 
 fid1 = Calculate.fid(model.N, model.env_tar, state_list1)
 exp_x1, exp_y1, exp_z1 = Calculate.expect(model.N, state_list1)
 
-endstate2, state_list2 = Evolve.rot(endstate1, model.N, 'z', np.pi)
+endstate2, state_list2 = Evolve.rot(endstate1, model.N, 'z', np.pi/2)
 fid2 = Calculate.fidr(model.N, model.env_tar, state_list2)
-exp_x2, exp_y2, exp_z2 = Calculate.expectr(model.N, state_list2)
+exp_x2, exp_y2, exp_z2 = Calculate.expectr(model.N, state_list2) 
+#endstate2, state_list2 = Evolve.free(Ham, endstate1, model.N, 1/100*model.T, model.dt)  # duration
+#fid2 = Calculate.fid(model.N, model.env_tar, state_list2)
+#exp_x2, exp_y2, exp_z2 = Calculate.expect(model.N, state_list2)
 
 endstate3, state_list3 = Evolve.free(Ham, endstate2, model.N, 1/3*model.T, model.dt)
 fid3 = Calculate.fid(model.N, model.env_tar, state_list3)
 exp_x3, exp_y3, exp_z3 = Calculate.expect(model.N, state_list3)
 
-endstate4, state_list4 = Evolve.rot(endstate3, model.N, 'z', np.pi)
+endstate4, state_list4 = Evolve.rot(endstate3, model.N, 'z', np.pi/2)
 fid4 = Calculate.fidr(model.N, model.env_tar, state_list4)
 exp_x4, exp_y4, exp_z4 = Calculate.expectr(model.N, state_list4)
 
