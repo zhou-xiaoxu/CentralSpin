@@ -290,21 +290,60 @@ class Calculate(object):
         
         return exp_x, exp_y, exp_z
 
-    def plot(count, fid, N):
+    def plot(count, fid, N, index):
         """
         Plot trend of fidelity
         Args:
             fid: original fidelity list
             N: N nuclei
+            index: name of figure, indicating which period the figure shows
         """
-        fig, ax = plt.subplots(figsize=(8,6))
-        ax.plot(count, fid[0], label='electron')
-        for i in range(1, int(N)+1):
-            ax.plot(count, fid[i], label='nucleus %d'%i)
-        ax.legend(fontsize=16, loc='center right')
-        ax.set_xlabel(r'$\omega t$', fontsize=16)
-        ax.set_ylabel('fidelity', fontsize=16)
-        ax.set_title(r'$ F-t, N=%d $'%N, fontsize=18)
+#        fig, ax = plt.subplots(figsize=(8,6))
+#        ax.plot(count, fid[0], label='electron')
+#        for i in range(1, int(N)+1):
+#            ax.plot(count, fid[i], label='nucleus %d'%i)
+#        ax.legend(fontsize=16, loc='center right')
+#        ax.set_xlabel(r'$\omega t$', fontsize=16)
+#        ax.set_ylabel('fidelity', fontsize=16)
+#        ax.set_title(r'$ F-t, N=%d $'%N, fontsize=18)
+        
+        fig = plt.figure(figsize=(8,6))
+        l1, = plt.plot(count, fid[0])
+        l2, = plt.plot(count, fid[1])
+        l3, = plt.plot(count, fid[2])
+        l4, = plt.plot(count, fid[3])
+        l5, = plt.plot(count, fid[4])
+#        l6, = plt.plot(count, fid[5])
+#        l7, = plt.plot(count, fid[6])
+#        l8, = plt.plot(count, fid[7])
+        
+#        plt.legend(handles=[l1, l2, l3, l4, ], 
+#                   labels=['electron', 'nucleus 1', 'nucleus 2', 'nucleus 3'], 
+#                   loc='center right', fontsize=16)
+        plt.legend(handles=[l1, l2, l3, l4, l5, ], 
+                   labels=['electron', 'nucleus 1', 'nucleus 2', 'nucleus 3', 
+                           'nucleus 4', ], 
+                           loc='center right', fontsize=16)
+#        plt.legend(handles=[l1, l2, l3, l4, l5, l6, ], 
+#                   labels=['electron', 'nucleus 1', 'nucleus 2', 'nucleus 3', 
+#                           'nucleus 4', 'nucleus 5', ], 
+#                   loc='center right', fontsize=16)
+#        plt.legend(handles=[l1, l2, l3, l4, l5, l6, l7, ], 
+#                   labels=['electron', 'nucleus 1', 'nucleus 2', 'nucleus 3', 
+#                           'nucleus 4', 'nucleus 5', 'nucleus 6', ], 
+#                   loc='center right', fontsize=16)
+#        plt.legend(handles=[l1, l2, l3, l4, l5, l6, l7, l8, ], 
+#                   labels=['electron', 'nucleus 1', 'nucleus 2', 'nucleus 3', 
+#                           'nucleus 4', 'nucleus 5', 'nucleus 6', 'nucleus 7'], 
+#                   loc='center right', fontsize=16) 
+        
+        plt.xlabel(r'$\omega t$', fontsize=16)
+        plt.ylabel('fidelity', fontsize=16)
+        plt.ylim((0.,1.0))
+        plt.xticks(fontsize=14)
+        plt.yticks(fontsize=14)
+        plt.title(r'$ F-t, N=%d $'%N, fontsize=20)
+        plt.savefig(r'D:\transfer\trans_code\results_qd\dd\N=%d\%d.png'%(N,index))
         
 
 params = dict()
@@ -315,8 +354,8 @@ params = {
           "A": [1*1e6,1*1e6,1*1e6,1*1e6,1.12*1e6,1.10*1e6,1.08*1e6],
           "mu": 1,
           "Bac": 1,
-          "T": 20e-6,
-          "dt": 20e-9,
+          "T": 40e-6,
+          "dt": 40e-9,
           "option": 'U'
           }
 
@@ -326,34 +365,44 @@ env_init = tensor_power(qt.ket2dm(qt.basis(2, 1)), params['N'])  # alternative
 model = QDSystem(params, c_init, env_init)
 Ham, Ham_r = model.ham()
 
-endstate1, state_list1 = Evolve.free(Ham, model.rho_init, model.N, 1/3*model.T, model.dt)
-fid1 = Calculate.fid(model.N, model.env_tar, state_list1)
-exp_x1, exp_y1, exp_z1 = Calculate.expect(model.N, state_list1)
+endstate = []
+endstate.append([model.rho_init])
+state_list = []
+fid = []
 
-endstate2, state_list2 = Evolve.rot(endstate1, model.N, 'z', np.pi/2)
-fid2 = Calculate.fidr(model.N, model.env_tar, state_list2)
-exp_x2, exp_y2, exp_z2 = Calculate.expectr(model.N, state_list2) 
-#endstate2, state_list2 = Evolve.free(Ham, endstate1, model.N, 1/100*model.T, model.dt)  # duration
-#fid2 = Calculate.fid(model.N, model.env_tar, state_list2)
-#exp_x2, exp_y2, exp_z2 = Calculate.expect(model.N, state_list2)
+for i in range(0,2):
 
-endstate3, state_list3 = Evolve.free(Ham, endstate2, model.N, 1/3*model.T, model.dt)
-fid3 = Calculate.fid(model.N, model.env_tar, state_list3)
-exp_x3, exp_y3, exp_z3 = Calculate.expect(model.N, state_list3)
-
-endstate4, state_list4 = Evolve.rot(endstate3, model.N, 'z', np.pi/2)
-fid4 = Calculate.fidr(model.N, model.env_tar, state_list4)
-exp_x4, exp_y4, exp_z4 = Calculate.expectr(model.N, state_list4)
-
-endstate5, state_list5 = Evolve.free(Ham, endstate4, model.N, 1/3*model.T, model.dt)
-fid5 = Calculate.fid(model.N, model.env_tar, state_list5)
-exp_x5, exp_y5, exp_z5 = Calculate.expect(model.N, state_list5)
-
-
-# plot fidelity
-count = params['omega'][0] * model.tlist
-
-Calculate.plot(count[:int(1/3*len(model.tlist))+2], fid1, model.N)
-Calculate.plot(count[:int(1/3*len(model.tlist))+2], fid3, model.N)
-Calculate.plot(count[:int(1/3*len(model.tlist))+2], fid5, model.N)
+    endstate1, state_list1 = Evolve.free(Ham, endstate[-1][0], model.N, 1/4*model.T, model.dt)
+    endstate.append([endstate1])
+    state_list.append([state_list1])
+    fid.append(Calculate.fid(model.N, model.env_tar, state_list[-1][0]))
+    
+    endstate2, state_list2 = Evolve.rot(endstate[-1][0], model.N, 'z', np.pi/2)
+    endstate.append([endstate2])
+    state_list.append([state_list2])
+    fid.append(Calculate.fidr(model.N, model.env_tar, state_list[-1][0]))
+    
+    endstate3, state_list3 = Evolve.free(Ham, endstate[-1][0], model.N, 1/2*model.T, model.dt)
+    endstate.append([endstate3])
+    state_list.append([state_list3])
+    fid.append(Calculate.fid(model.N, model.env_tar, state_list[-1][0]))
+    
+    endstate4, state_list4 = Evolve.rot(endstate[-1][0], model.N, 'z', np.pi/2)
+    endstate.append([endstate4])
+    state_list.append([state_list4])
+    fid.append(Calculate.fidr(model.N, model.env_tar, state_list[-1][0]))
+    
+    endstate5, state_list5 = Evolve.free(Ham, endstate[-1][0], model.N, 1/4*model.T, model.dt)
+    endstate.append([endstate5])
+    state_list.append([state_list5])
+    fid.append(Calculate.fid(model.N, model.env_tar, state_list[-1][0]))
+    
+    
+    # plot fidelity
+    count = params['omega'][0] * model.tlist
+    
+    Calculate.plot(count[:int(1/4*len(model.tlist))+1], fid[0+5*i], model.N, index=0+5*i+1)
+    Calculate.plot(count[:int(1/2*len(model.tlist))+1], fid[2+5*i], model.N, index=2+5*i+1)
+    Calculate.plot(count[:int(1/4*len(model.tlist))+1], fid[4+5*i], model.N, index=4+5*i+1)
+    
 
