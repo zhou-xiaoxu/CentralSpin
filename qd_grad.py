@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 @author: Xiaoxu Zhou
-Latest update: 03/25/2022
+Latest update: 03/30/2022
 """
 
 import numpy as np
@@ -71,10 +71,16 @@ class CentralSpin(object):
         # interaction term in Hamiltonian
         Ham_int = zeroN1
         for i in range(1,self.N+1):
+#            ## neglect zz interaction term
             Ham_int += 1/4 * self.A[i-1] * \
                        (qt.tensor([qt.sigmax(), sigmaxi(i, self.N)]) + \
                         qt.tensor([qt.sigmay(), sigmayi(i, self.N)]))
-        
+#            ## full form
+#            Ham_int += 1/4 * self.A[i-1] * \
+#                       (qt.tensor([qt.sigmax(), sigmaxi(i, self.N)]) + \
+#                        qt.tensor([qt.sigmay(), sigmayi(i, self.N)]) + \
+#                        qt.tensor([qt.sigmaz(), sigmazi(i, self.N)]))
+            
         # total Hamiltonian in interaction picture
         Ham = Ham_e + Ham_env + Ham_int
         
