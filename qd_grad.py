@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 @author: Xiaoxu Zhou
-Latest update: 03/30/2022
+Latest update: 04/02/2022
 """
 
 import numpy as np
@@ -80,7 +80,7 @@ class CentralSpin(object):
 #                       (qt.tensor([qt.sigmax(), sigmaxi(i, self.N)]) + \
 #                        qt.tensor([qt.sigmay(), sigmayi(i, self.N)]) + \
 #                        qt.tensor([qt.sigmaz(), sigmazi(i, self.N)]))
-            
+        
         # total Hamiltonian in interaction picture
         Ham = Ham_e + Ham_env + Ham_int
         
@@ -92,8 +92,10 @@ class CentralSpin(object):
                           np.sin(self.omega[0]-self.omega[i]) * (sigmax0*sigmayi(i,self.N+1) - sigmay0*sigmaxi(i,self.N+1)))
         
         # target Hamiltonian
+#        Ham_e_t = 0.5 * self.omega[0] * sigmazi(1,2)
         Ham_n = 0.5 * self.omega[self.n] * sigmazi(self.n, self.N)
         Ham_n = qt.tensor([qt.qeye(2), Ham_n])
+#        Ham_n = qt.tensor([qt.qeye(2), Ham_n])
         Ham_tar = Ham_e + Ham_n + \
                   1/4 * self.A[self.n-1] * \
                   (qt.tensor([qt.sigmax(), sigmaxi(self.n, self.N)]) + \
@@ -187,7 +189,7 @@ class CentralSpin(object):
 
 params = dict()
 params = {
-          "N": 7,
+          "N": 5,
           "c": [0,1],
           "omega": [2500*1e3,10000*1e3,8500*1e3,7000*1e3,5500*1e3,4000*1e3,2500*1e3,1000*1e3],
           "A": [1.20*1e6,1.18*1e6,1.16*1e6,1.14*1e6,1.12*1e6,1.10*1e6,1.08*1e6],
@@ -264,7 +266,7 @@ if find=='1':
     
     # plot fidelity
     count = params['omega'][0] * model.tlist
-    fig = plt.figure(figsize=(10,6))
+    fig = plt.figure(figsize=(8,6))
     l1, = plt.plot(count, fid[0])
     l2, = plt.plot(count, fid[1])
     l3, = plt.plot(count, fid[2])
@@ -273,25 +275,28 @@ if find=='1':
     l6, = plt.plot(count, fid[5])
     l7, = plt.plot(count, fid[6])
     l8, = plt.plot(count, fid[7])
-
-#    plt.legend(handles=[l1, l2, l3, l4, ], 
-#               labels=['electron', 'nucleus 1', 'nucleus 2', 'nucleus 3'], 
-#               loc='center right', fontsize=16)
-#    plt.legend(handles=[l1, l2, l3, l4, l5, ], 
-#               labels=['electron', 'nucleus 1', 'nucleus 2', 'nucleus 3', 
-#                       'nucleus 4'], 
-#               loc='center right', fontsize=16)
-#    plt.legend(handles=[l1, l2, l3, l4, l5, l6, ], 
-#               labels=['electron', 'nucleus 1', 'nucleus 2', 'nucleus 3', 
-#                       'nucleus 4', 'nucleus 5', ], 
-#               loc='center right', fontsize=16)
-#    plt.legend(handles=[l1, l2, l3, l4, l5, l6, l7, ], 
-#               labels=['electron', 'nucleus 1', 'nucleus 2', 'nucleus 3', 
-#                       'nucleus 4', 'nucleus 5', 'nucleus 6', ], 
-#               loc='center right', fontsize=16)
+    
+    plt.rcParams['font.sans-serif'] = ['SimHei']  # Chinese character
+    plt.rcParams['axes.unicode_minus'] = False
+    
+    plt.legend(handles=[l1, l2, l3, l4, ], 
+               labels=[r'电子', r'核1', r'核2', r'核3', ], 
+               loc='center right', fontsize=16)
+    plt.legend(handles=[l1, l2, l3, l4, l5, ], 
+               labels=[r'电子', r'核1', r'核2', r'核3', 
+                       r'核4', ], 
+               loc='center right', fontsize=16)
+    plt.legend(handles=[l1, l2, l3, l4, l5, l6, ], 
+               labels=[r'电子', r'核1', r'核2', r'核3', 
+                       r'核4', r'核5', ], 
+               loc='center right', fontsize=16)
+    plt.legend(handles=[l1, l2, l3, l4, l5, l6, l7, ], 
+               labels=[r'电子', r'核1', r'核2', r'核3', 
+                       r'核4', r'核5', r'核6', ], 
+               loc='center right', fontsize=16)
     plt.legend(handles=[l1, l2, l3, l4, l5, l6, l7, l8, ], 
-               labels=['electron', 'nucleus 1', 'nucleus 2', 'nucleus 3', 
-                       'nucleus 4', 'nucleus 5', 'nucleus 6', 'nucleus 7'], 
+               labels=[r'电子', r'核1', r'核2', r'核3', 
+                       r'核4', r'核5', r'核6', '核7', ], 
                loc='center right', fontsize=16)    
 
     plt.xlabel(r'$\omega t$', fontsize=16)
@@ -299,9 +304,13 @@ if find=='1':
     plt.xticks(fontsize=14)
     plt.yticks(fontsize=14)
     plt.title('$F-t$', fontsize=20)
+    plt.savefig(r'D:\transfer\trans_code\results_qd\grad\grad2中_0.01步长\pos_%.2f.png'%(params['omega'][0]*1e-6))
 
 elif find=='2':
-    omega0_list = np.arange(3.0*1e6, 11.0*1e6, 0.01*1e6)
+    omega0_list = np.arange(0.1*1e6, 11.0*1e6+0.01*1e6, 0.01*1e6)
+    
+#    fidm_e, fidm_1, fidm_2, fidm_3, fidm_4 = [], [], [], [], []  # fid max
+#    fidmw_e, fidmw_1, fidmw_2, fidmw_3, fidmw_4 = 2.0, 2.0, 2.0, 2.0, 2.0  # omega0 giving fid max
     
     fidm_e = []  # fid max
     fidm_1 = []
@@ -436,33 +445,36 @@ elif find=='2':
         l6, = plt.plot(count, fid[5])
         l7, = plt.plot(count, fid[6])
         l8, = plt.plot(count, fid[7])
-
+        
+        plt.rcParams['font.sans-serif'] = ['SimHei']  # Chinese character
+        plt.rcParams['axes.unicode_minus'] = False
+        
 #        plt.legend(handles=[l1, l2, l3, l4, ], 
-#                   labels=['electron', 'nucleus 1', 'nucleus 2', 'nucleus 3'], 
+#                   labels=[r'电子', r'核1', r'核2', r'核3', ], 
 #                   loc='center right', fontsize=16)
 #        plt.legend(handles=[l1, l2, l3, l4, l5, ], 
-#                   labels=['electron', 'nucleus 1', 'nucleus 2', 'nucleus 3', 
-#                           'nucleus 4', ], 
-#                           loc='center right', fontsize=16)
+#                   labels=[r'电子', r'核1', r'核2', r'核3', 
+#                           r'核4', ], 
+#                   loc='center right', fontsize=16)
 #        plt.legend(handles=[l1, l2, l3, l4, l5, l6, ], 
-#                   labels=['electron', 'nucleus 1', 'nucleus 2', 'nucleus 3', 
-#                           'nucleus 4', 'nucleus 5', ], 
+#                   labels=[r'电子', r'核1', r'核2', r'核3', 
+#                           r'核4', r'核5', ], 
 #                   loc='center right', fontsize=16)
 #        plt.legend(handles=[l1, l2, l3, l4, l5, l6, l7, ], 
-#                   labels=['electron', 'nucleus 1', 'nucleus 2', 'nucleus 3', 
-#                           'nucleus 4', 'nucleus 5', 'nucleus 6', ], 
+#                   labels=[r'电子', r'核1', r'核2', r'核3', 
+#                           r'核4', r'核5', r'核6', ], 
 #                   loc='center right', fontsize=16)
         plt.legend(handles=[l1, l2, l3, l4, l5, l6, l7, l8, ], 
-                   labels=['electron', 'nucleus 1', 'nucleus 2', 'nucleus 3', 
-                           'nucleus 4', 'nucleus 5', 'nucleus 6', 'nucleus 7'], 
+                   labels=[r'电子', r'核1', r'核2', r'核3', 
+                           r'核4', r'核5', r'核6', '核7', ], 
                    loc='center right', fontsize=16)        
 
         plt.xlabel(r'$\omega t$', fontsize=16)
-        plt.ylabel('fidelity', fontsize=16)
+        plt.ylabel(r'$F$', fontsize=16)
         plt.xticks(fontsize=14)
         plt.yticks(fontsize=14)
-        plt.title(r'$ F-t, \omega_0=%.2f \times 10^6 rad/s$'%(omega0*1e-6), fontsize=20)
-        plt.savefig(r'D:\transfer\trans_code\results_qd\grad\grad2中_0.01步长\%.2f.png'%(omega0*1e-6))  # change N
+        plt.title(r'$ F-\omega t, \omega_0=%.2f \times 10^6 rad/s$'%(omega0*1e-6), fontsize=20)
+        plt.savefig(r'D:\transfer\trans_code\results_qd\grad\N=7_新basis_0.01步长\%.2f.png'%(omega0*1e-6))  # change N
         
         fig = plt.figure(figsize=(8,6))
         plt.plot(count, S)
@@ -471,8 +483,8 @@ elif find=='2':
         plt.xticks(fontsize=14)
         plt.yticks(fontsize=14)
         plt.ticklabel_format(style='sci',scilimits=(0,0),axis='y')
-        plt.title(r'$ S-t, \omega_0=%.2f \times 10^6 rad/s$'%(omega0*1e-6), fontsize=20)
-        plt.savefig(r'D:\transfer\trans_code\results_qd\grad\grad2中_0.01步长\S_%.2f.png'%(omega0*1e-6))  # change N
+        plt.title(r'$ S-\omega t, \omega_0=%.2f \times 10^6 rad/s$'%(omega0*1e-6), fontsize=20)
+        plt.savefig(r'D:\transfer\trans_code\results_qd\grad\N=7_新basis_0.01步长\S_%.2f.png'%(omega0*1e-6))  # change N
         
 #    print("fidmw:", fidmw_e, fidmw_1, fidmw_2, fidmw_3, fidmw_4)
     
@@ -486,33 +498,36 @@ elif find=='2':
     l6, = plt.plot(omega0_list_, fidm_5)
     l7, = plt.plot(omega0_list_, fidm_6)
     l8, = plt.plot(omega0_list_, fidm_7)
-
+    
+    plt.rcParams['font.sans-serif'] = ['SimHei']  # Chinese character
+    plt.rcParams['axes.unicode_minus'] = False
+    
 #    plt.legend(handles=[l1, l2, l3, l4, ], 
-#                   labels=['electron', 'nucleus 1', 'nucleus 2', 'nucleus 3'], 
-#                   loc='best', fontsize=16)
+#               labels=[r'电子', r'核1', r'核2', r'核3', ], 
+#               loc='best', fontsize=16)
 #    plt.legend(handles=[l1, l2, l3, l4, l5, ],
-#              labels=['electron', 'nucleus 1', 'nucleus 2', 'nucleus 3', 
-#                      'nucleus 4', ], 
-#              loc='best', fontsize=16)
+#               labels=[r'电子', r'核1', r'核2', r'核3', 
+#                       r'核4', ], 
+#               loc='best', fontsize=16)
 #    plt.legend(handles=[l1, l2, l3, l4, l5, l6, ], 
-#               labels=['electron', 'nucleus 1', 'nucleus 2', 'nucleus 3', 
-#                       'nucleus 4', 'nucleus 5', ], 
+#               labels=[r'电子', r'核1', r'核2', r'核3', 
+#                       r'核4', r'核5', ], 
 #               loc='best', fontsize=16)
 #    plt.legend(handles=[l1, l2, l3, l4, l5, l6, l7, ], 
-#               labels=['electron', 'nucleus 1', 'nucleus 2', 'nucleus 3', 
-#                       'nucleus 4', 'nucleus 5', 'nucleus 6', ], 
+#               labels=[r'电子', r'核1', r'核2', r'核3', 
+#                       r'核4', r'核5', r'核6', ], 
 #               loc='lower right', fontsize=16)
     plt.legend(handles=[l1, l2, l3, l4, l5, l6, l7, l8, ], 
-               labels=['electron', 'nucleus 1', 'nucleus 2', 'nucleus 3', 
-                       'nucleus 4', 'nucleus 5', 'nucleus 6', 'nucleus 7'], 
+               labels=[r'电子', r'核1', r'核2', r'核3', 
+                       r'核4', r'核5', r'核6', '核7', ], 
                loc='lower right', fontsize=16)
 
-    plt.xlabel('$\omega_0 (*10^6 rad/s)$', fontsize=16)
-    plt.ylabel('Maximal fidelity', fontsize=16)
+    plt.xlabel(r'$\omega_0 (\times 10^6 rad/s)$', fontsize=16)
+    plt.ylabel(r'$F_{max}$', fontsize=16)
     plt.xticks(fontsize=14)
     plt.yticks(fontsize=14)
-    plt.title('Maximal fidelity $- \omega_0$', fontsize=20)
-    plt.savefig(r'D:\transfer\trans_code\results_qd\grad\grad2中_0.01步长\fidmax.png')  # change N
+    plt.title(r'$F_{max} - \omega_0$', fontsize=20)
+    plt.savefig(r'D:\transfer\trans_code\results_qd\grad\N=7_新basis_0.01步长\fidmax.png')  # change N
 
 elif find=='3':
     model = CentralSpin(params, params['omega'][0], c_init, env_init)
