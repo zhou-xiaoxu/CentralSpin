@@ -2,7 +2,7 @@
 """
 Useful functions for selective transformation problem
 @author: Xiaoxu Zhou
-Latest update: 03/20/2022
+Latest update: 04/05/2022
 """
 
 import numpy as np
@@ -112,6 +112,12 @@ def qtrace(mat):
     tr22 = mat[0][1][0][1]
     tr = tr11 + tr22
     return tr
+    
+def fid_spin(tar, state):
+    return (state*tar).tr() + 2*np.sqrt(np.linalg.det(state) * np.linalg.det(tar))
+
+def fid_gen(tar, state):
+    return np.square(np.absolute((tar.sqrtm() * state * tar.sqrtm()).sqrtm().tr()))
 
 def oper_norm(F):
     """
@@ -129,14 +135,18 @@ def fidm(A, B):
     deno = np.sqrt(np.trace(A_n*qt.dag(A_n)) * np.trace(B_n*qt.dag(B_n)))
     fid = np.abs(np.trace(qt.dag(A_n)*B_n)) / deno
     
+#    fid = np.trace(qt.dag(A) * B)
+    
     return fid
 
-def fidmu(A, B):
+def fidmu(A, B, d):
     """
     Calculate fidelity between unitary operators A and B
     """
-    A_n = oper_norm(A)  # normalize operators
-    B_n = oper_norm(B)
-    fid = np.abs(np.trace(qt.dag(A_n) * B_n))
+#    A_n = oper_norm(A)  # normalize operators
+#    B_n = oper_norm(B)
+#    fid = np.abs(np.trace(qt.dag(A_n) * B_n))
+    
+    fid = np.abs(np.trace(qt.dag(A) * B)) / d
     
     return fid
