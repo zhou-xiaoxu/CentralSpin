@@ -1,13 +1,15 @@
 # -*- coding: utf-8 -*-
 """
 @author: Xiaoxu Zhou
-Latest update: 04/02/2022
+Latest update: 04/04/2022
 """
 
 import numpy as np
 import qutip as qt
-from scipy.linalg import logm, expm
+from scipy.linalg import logm
+
 import matplotlib.pyplot as plt
+
 from utils.utils import tensor_power, sigmaxi, sigmayi, sigmazi, fidm, fidmu
 
 
@@ -39,7 +41,7 @@ class CentralSpin(object):
         self.c_tar = c_init  # target electron spin state
         self.env_tar = c_init
         self.rho_init = qt.tensor([self.c_init, self.env_init])
-       
+    
     def ham(self):
         """
         Hamiltonian terms of the system
@@ -118,48 +120,35 @@ class CentralSpin(object):
         # evolve
         evol = qt.mesolve(Ham, self.rho_init, self.tlist, self.cops, [])
         state_list = []
+        append = state_list.append
         for i in range(0,self.N+1):
-            state_list.append([[qt.ptrace(s,i)] for s in evol.states])  # s=state
+            append([[qt.ptrace(s,i)] for s in evol.states])  # s=state
         
         return evol.states, state_list
-        
+      
     def fid(self, state_list):
         """
         Calculate fidelity
         """
-        fid = []  # fidelity especially for spin system
-        
-        # with initial electron state
-        fid.append([(s[0] * self.c_tar).tr() + \
-                    2 * np.sqrt(np.linalg.det(s[0]) * np.linalg.det(self.c_tar)) \
-                    for s in state_list[0]])
+        # fidelity especially for spin system
+        fid = []
+        append = fid.append
+        append([(s[0] * self.c_tar).tr() + \
+                2 * np.sqrt(np.linalg.det(s[0]) * np.linalg.det(self.c_tar)) \
+                for s in state_list[0]])
         for i in range(1,self.N+1):
-            fid.append([(s[0] * self.env_tar).tr() + \
-                        2 * np.sqrt(np.linalg.det(s[0]) * np.linalg.det(self.env_tar)) \
-                        for s in state_list[i]])
+            append([(s[0] * self.env_tar).tr() + \
+                    2 * np.sqrt(np.linalg.det(s[0]) * np.linalg.det(self.env_tar)) \
+                    for s in state_list[i]])
         
-        fid2 = []  # general form of fidelity
-        fid2.append([np.square(np.absolute((self.c_tar.sqrtm() * s[0] * self.c_tar.sqrtm()).sqrtm().tr())) \
-                     for s in state_list[0]])
+        # general form of fidelity
+        fid2 = []
+        append2 = fid2.append
+        append2([np.square(np.absolute((self.c_tar.sqrtm() * s[0] * self.c_tar.sqrtm()).sqrtm().tr())) \
+                for s in state_list[0]])
         for i in range(1,self.N+1):
-            fid2.append([np.square(np.absolute((self.env_tar.sqrtm() * s[0] * self.env_tar.sqrtm()).sqrtm().tr())) \
-                         for s in state_list[i]])
-        
-        # with current electron state
-#        fid.append([(s[0] * s[0]).tr() + \
-#                    2 * np.sqrt(np.linalg.det(s[0]) * np.linalg.det(s[0])) \
-#                    for s in state_list[0]])
-#        for i in range(1,self.N+1):
-#            fid.append([(s[0] * s[0]).tr() + \
-#                        2 * np.sqrt(np.linalg.det(s[0]) * np.linalg.det(s[0])) \
-#                        for s in state_list[i]])
-#        
-#        fid2 = []  # general form of fidelity
-#        fid2.append([np.square(np.absolute((s[0].sqrtm() * s[0] * s[0].sqrtm()).sqrtm().tr())) \
-#                     for s in state_list[0]])
-#        for i in range(1,self.N+1):
-#            fid2.append([np.square(np.absolute((s[0].sqrtm() * s[0] * s[0].sqrtm()).sqrtm().tr())) \
-#                         for s in state_list[i]])
+            append2([np.square(np.absolute((self.env_tar.sqrtm() * s[0] * self.env_tar.sqrtm()).sqrtm().tr())) \
+                    for s in state_list[i]])
         
         return fid2
     
@@ -167,13 +156,15 @@ class CentralSpin(object):
         """
         Calculate expectation of observable sigma_x, sigma_y, sigma_z
         """
-        exp_x = []
-        exp_y = []
-        exp_z = []
+        exp_x, exp_y, exp_z = [], [], []
+        appendx = exp_x.append
+        appendy = exp_y.append
+        appendz = exp_z.append
         for i in range(0,self.N+1):
-            exp_x.append([qt.expect(qt.sigmax(), [s[0] for s in state_list[i]])])
-            exp_y.append([qt.expect(qt.sigmay(), [s[0] for s in state_list[i]])])
-            exp_z.append([qt.expect(qt.sigmaz(), [s[0] for s in state_list[i]])])
+            appendx([qt.expect(qt.sigmax(), [s[0] for s in state_list[i]])])
+            appendy([qt.expect(qt.sigmay(), [s[0] for s in state_list[i]])])
+            appendz([qt.expect(qt.sigmaz(), [s[0] for s in state_list[i]])])
+        
         return exp_x, exp_y, exp_z
     
     def entropy(self, state):
@@ -181,15 +172,16 @@ class CentralSpin(object):
         Calculate von Neumann entropy of the whole system
         """
         S = []
+        append = S.append
         for i in range(0,len(self.tlist)):
-            S.append([-np.trace(state[i] * logm(state[i]))])
+            append([-np.trace(state[i] * logm(state[i]))])
         
         return S
-        
+
 
 params = dict()
 params = {
-          "N": 5,
+          "N": 7,
           "c": [0,1],
           "omega": [2500*1e3,10000*1e3,8500*1e3,7000*1e3,5500*1e3,4000*1e3,2500*1e3,1000*1e3],
           "A": [1.20*1e6,1.18*1e6,1.16*1e6,1.14*1e6,1.12*1e6,1.10*1e6,1.08*1e6],
@@ -225,44 +217,52 @@ if find=='1':
     fidm_7 = max(fid[7])
     
     pos_e = []
+    appende = pos_e.append
     pos_e.append(fid[0].index(fidm_e))  # position when a nuclear spin reaches maximal fidelity
     for i in range(0,model.N+1):
-        pos_e.append(fid[i][pos_e[0]])
+        appende(fid[i][pos_e[0]])
         
     pos_1 = []
+    append1 = pos_1.append
     pos_1.append(fid[1].index(fidm_1))
     for i in range(0,model.N+1):
-        pos_1.append(fid[i][pos_1[0]])
+        append1(fid[i][pos_1[0]])
         
     pos_2 = []
+    append2 = pos_2.append
     pos_2.append(fid[2].index(fidm_2))
     for i in range(0,model.N+1):
-        pos_2.append(fid[i][pos_2[0]])
+        append2(fid[i][pos_2[0]])
         
     pos_3 = []
+    append3 = pos_3.append
     pos_3.append(fid[3].index(fidm_3))
     for i in range(0,model.N+1):
-        pos_3.append(fid[i][pos_3[0]])
+        append3(fid[i][pos_3[0]])
         
     pos_4 = []
+    append4 = pos_4.append
     pos_4.append(fid[4].index(fidm_4))
     for i in range(0,model.N+1):
-        pos_4.append(fid[i][pos_4[0]])
+        append4(fid[i][pos_4[0]])
     
     pos_5 = []
+    append5 = pos_5.append
     pos_5.append(fid[5].index(fidm_5))
     for i in range(0,model.N+1):
-        pos_5.append(fid[i][pos_5[0]])
+        append5(fid[i][pos_5[0]])
         
     pos_6 = []
+    append6 = pos_6.append
     pos_6.append(fid[6].index(fidm_6))
     for i in range(0,model.N+1):
-        pos_6.append(fid[i][pos_6[0]])
+        append6(fid[i][pos_6[0]])
         
     pos_7 = []
+    append7 = pos_7.append
     pos_7.append(fid[7].index(fidm_7))
     for i in range(0,model.N+1):
-        pos_7.append(fid[i][pos_7[0]])
+        append7(fid[i][pos_7[0]])
     
     # plot fidelity
     count = params['omega'][0] * model.tlist
@@ -279,21 +279,21 @@ if find=='1':
     plt.rcParams['font.sans-serif'] = ['SimHei']  # Chinese character
     plt.rcParams['axes.unicode_minus'] = False
     
-    plt.legend(handles=[l1, l2, l3, l4, ], 
-               labels=[r'电子', r'核1', r'核2', r'核3', ], 
-               loc='center right', fontsize=16)
-    plt.legend(handles=[l1, l2, l3, l4, l5, ], 
-               labels=[r'电子', r'核1', r'核2', r'核3', 
-                       r'核4', ], 
-               loc='center right', fontsize=16)
-    plt.legend(handles=[l1, l2, l3, l4, l5, l6, ], 
-               labels=[r'电子', r'核1', r'核2', r'核3', 
-                       r'核4', r'核5', ], 
-               loc='center right', fontsize=16)
-    plt.legend(handles=[l1, l2, l3, l4, l5, l6, l7, ], 
-               labels=[r'电子', r'核1', r'核2', r'核3', 
-                       r'核4', r'核5', r'核6', ], 
-               loc='center right', fontsize=16)
+#    plt.legend(handles=[l1, l2, l3, l4, ], 
+#               labels=[r'电子', r'核1', r'核2', r'核3', ], 
+#               loc='center right', fontsize=16)
+#    plt.legend(handles=[l1, l2, l3, l4, l5, ], 
+#               labels=[r'电子', r'核1', r'核2', r'核3', 
+#                       r'核4', ], 
+#               loc='center right', fontsize=16)
+#    plt.legend(handles=[l1, l2, l3, l4, l5, l6, ], 
+#               labels=[r'电子', r'核1', r'核2', r'核3', 
+#                       r'核4', r'核5', ], 
+#               loc='center right', fontsize=16)
+#    plt.legend(handles=[l1, l2, l3, l4, l5, l6, l7, ], 
+#               labels=[r'电子', r'核1', r'核2', r'核3', 
+#                       r'核4', r'核5', r'核6', ], 
+#               loc='center right', fontsize=16)
     plt.legend(handles=[l1, l2, l3, l4, l5, l6, l7, l8, ], 
                labels=[r'电子', r'核1', r'核2', r'核3', 
                        r'核4', r'核5', r'核6', '核7', ], 
@@ -330,13 +330,14 @@ elif find=='2':
     fidmw_6 = 0.
     fidmw_7 = 0.
     
-    fidma_1 = [0 for i in range(int(params['N']))] # fidelities of all nuclei at climax
-    fidma_2 = [0 for i in range(int(params['N']))]
-    fidma_3 = [0 for i in range(int(params['N']))]
-    fidma_4 = [0 for i in range(int(params['N']))]
-    fidma_5 = [0 for i in range(int(params['N']))]
-    fidma_6 = [0 for i in range(int(params['N']))]
-    fidma_7 = [0 for i in range(int(params['N']))]
+    zero_array = [0 for i in range(int(params['N']))]
+    fidma_1 = zero_array # fidelities of all nuclei at climax
+    fidma_2 = zero_array
+    fidma_3 = zero_array
+    fidma_4 = zero_array
+    fidma_5 = zero_array
+    fidma_6 = zero_array
+    fidma_7 = zero_array
     
     for omega0 in omega0_list:
         model = CentralSpin(params, omega0, c_init, env_init)
@@ -536,3 +537,4 @@ elif find=='3':
     fidmu = fidmu(Ham.expm(), Ham_tar.expm(), np.power(2,int(params['N']+1)))
     print("fidm:", fidm)
     print("fidmu:", fidmu)
+    
