@@ -2,7 +2,7 @@
 """
 Useful functions for selective transformation problem
 @author: Xiaoxu Zhou
-Latest update: 04/05/2022
+Latest update: 04/06/2022
 """
 
 import numpy as np
@@ -11,9 +11,13 @@ import qutip as qt
 import matplotlib.pyplot as plt
 
 def pauli():
+    """
+    Make Pauli matrices
+    """
     sigmax = qt.sigmax()
     sigmay = qt.sigmay()
     sigmaz = qt.sigmaz()
+    
     return sigmax, sigmay, sigmaz
 
 def make_basis():
@@ -28,7 +32,24 @@ def make_basis():
     ket11 = qt.tensor([ket1, ket1])
     sgqubit = np.array([ket0, ket1])
     twoqubit = np.array([ket00, ket01, ket10, ket11])
+    
     return sgqubit, twoqubit
+
+def bi2basis(bi):
+    """
+    Convert binary tuple to corresponding basis
+    Args:
+        bi: tuple or list, one element of the binary sequence
+    """
+    print('def bi:',bi)
+    num = len(bi)
+    subbasis = qt.basis(2,1-bi[0])
+    print('subbasis:', subbasis)
+    for i in range(1,num):
+        subbasis = qt.tensor(subbasis, qt.basis(2,1-bi[i]))
+        print('subbasis:', subbasis)
+    
+    return subbasis
 
 def tensor_power(mat, n):
     """
@@ -45,9 +66,9 @@ def tensor_power(mat, n):
         res = mat
         for _ in range(2, n+1):
             res = qt.tensor([res, mat])
-#            print("res:", res)
     else:
         print('Invalid value of the exponent')
+    
     return res
 
 def sigmaxi(i, N):
@@ -65,6 +86,7 @@ def sigmaxi(i, N):
     else:
         res1 = qt.tensor([tensor_power(qt.qeye(2), i-1), qt.sigmax()])
         res = qt.tensor([res1, tensor_power(qt.qeye(2), N-i)])
+    
     return res
 
 def sigmayi(i, N):
@@ -82,6 +104,7 @@ def sigmayi(i, N):
     else:
         res1 = qt.tensor([tensor_power(qt.qeye(2), i-1), qt.sigmay()])
         res = qt.tensor([res1, tensor_power(qt.qeye(2), N-i)])
+    
     return res
 
 def sigmazi(i, N):
@@ -99,6 +122,7 @@ def sigmazi(i, N):
     else:
         res1 = qt.tensor([tensor_power(qt.qeye(2), i-1), qt.sigmaz()])
         res = qt.tensor([res1, tensor_power(qt.qeye(2), N-i)])
+    
     return res
 
 def qtrace(mat):
@@ -111,6 +135,7 @@ def qtrace(mat):
     tr11 = mat[0][0][0][0]
     tr22 = mat[0][1][0][1]
     tr = tr11 + tr22
+    
     return tr
     
 def fid_spin(tar, state):
@@ -123,8 +148,7 @@ def oper_norm(F):
     """
     Normalize an operator
     """
-    norm = F / np.sqrt(np.trace(F * qt.dag(F)))
-    return norm
+    return F / np.sqrt(np.trace(F * qt.dag(F)))
 
 def fidm(A, B):
     """

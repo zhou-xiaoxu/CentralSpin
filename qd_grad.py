@@ -1,16 +1,18 @@
 # -*- coding: utf-8 -*-
 """
 @author: Xiaoxu Zhou
-Latest update: 04/04/2022
+Latest update: 04/06/2022
 """
 
 import numpy as np
 import qutip as qt
 from scipy.linalg import logm
+import random
+from itertools import product
 
 import matplotlib.pyplot as plt
 
-from utils.utils import tensor_power, sigmaxi, sigmayi, sigmazi, fidm, fidmu
+from utils.utils import bi2basis, tensor_power, sigmaxi, sigmayi, sigmazi, fid_spin, fid_gen, fidm, fidmu
 
 
 class CentralSpin(object):
@@ -109,7 +111,7 @@ class CentralSpin(object):
 #                   qt.tensor([qt.sigmay(), qt.sigmay()]))
         
         return Ham, Ham_r, Ham_tar
-        
+    
     def evolve(self, Ham):
         """
         Evolution under a Hamiltonian
@@ -120,35 +122,44 @@ class CentralSpin(object):
         # evolve
         evol = qt.mesolve(Ham, self.rho_init, self.tlist, self.cops, [])
         state_list = []
-        append = state_list.append
+#        append = state_list.append
         for i in range(0,self.N+1):
-            append([[qt.ptrace(s,i)] for s in evol.states])  # s=state
+            state_list.append([qt.ptrace(s,i) for s in evol.states])  # s=state
+        
+#        print(state_list)
         
         return evol.states, state_list
-      
+    
     def fid(self, state_list):
         """
         Calculate fidelity
         """
+        tar = [self.c_tar for i in range(len(self.tlist))]
+        
         # fidelity especially for spin system
         fid = []
-        append = fid.append
-        append([(s[0] * self.c_tar).tr() + \
-                2 * np.sqrt(np.linalg.det(s[0]) * np.linalg.det(self.c_tar)) \
-                for s in state_list[0]])
-        for i in range(1,self.N+1):
-            append([(s[0] * self.env_tar).tr() + \
-                    2 * np.sqrt(np.linalg.det(s[0]) * np.linalg.det(self.env_tar)) \
-                    for s in state_list[i]])
-        
+#        append = fid.append
+#        fid.append([(s[0] * self.c_tar).tr() + \
+#                    2 * np.sqrt(np.linalg.det(s[0]) * np.linalg.det(self.c_tar)) \
+#                    for s in state_list[0]])
+#        for i in range(1,self.N+1):
+#            fid.append([(s[0] * self.env_tar).tr() + \
+#                        2 * np.sqrt(np.linalg.det(s[0]) * np.linalg.det(self.env_tar)) \
+#                        for s in state_list[i]])
+        for i in range(0,self.N+1):
+            fid.append(list(map(fid_spin, tar, state_list[i])))
+                
         # general form of fidelity
         fid2 = []
-        append2 = fid2.append
-        append2([np.square(np.absolute((self.c_tar.sqrtm() * s[0] * self.c_tar.sqrtm()).sqrtm().tr())) \
-                for s in state_list[0]])
-        for i in range(1,self.N+1):
-            append2([np.square(np.absolute((self.env_tar.sqrtm() * s[0] * self.env_tar.sqrtm()).sqrtm().tr())) \
-                    for s in state_list[i]])
+#        append2 = fid2.append
+#        fid2.append([np.square(np.absolute((self.c_tar.sqrtm() * s[0] * self.c_tar.sqrtm()).sqrtm().tr())) \
+#                     for s in state_list[0]])
+#        for i in range(1,self.N+1):
+#            fid2.append([np.square(np.absolute((self.env_tar.sqrtm() * s[0] * self.env_tar.sqrtm()).sqrtm().tr())) \
+#                         for s in state_list[i]])
+        for i in range(0,self.N+1):
+            fid2.append(list(map(fid_gen, tar, state_list[i])))
+#        print(len(fid2[0]))
         
         return fid2
     
@@ -157,13 +168,13 @@ class CentralSpin(object):
         Calculate expectation of observable sigma_x, sigma_y, sigma_z
         """
         exp_x, exp_y, exp_z = [], [], []
-        appendx = exp_x.append
-        appendy = exp_y.append
-        appendz = exp_z.append
+#        appendx = exp_x.append
+#        appendy = exp_y.append
+#        appendz = exp_z.append
         for i in range(0,self.N+1):
-            appendx([qt.expect(qt.sigmax(), [s[0] for s in state_list[i]])])
-            appendy([qt.expect(qt.sigmay(), [s[0] for s in state_list[i]])])
-            appendz([qt.expect(qt.sigmaz(), [s[0] for s in state_list[i]])])
+            exp_x.append([qt.expect(qt.sigmax(), [s[0] for s in state_list[i]])])
+            exp_y.append([qt.expect(qt.sigmay(), [s[0] for s in state_list[i]])])
+            exp_z.append([qt.expect(qt.sigmaz(), [s[0] for s in state_list[i]])])
         
         return exp_x, exp_y, exp_z
     
@@ -172,17 +183,17 @@ class CentralSpin(object):
         Calculate von Neumann entropy of the whole system
         """
         S = []
-        append = S.append
+#        append = S.append
         for i in range(0,len(self.tlist)):
-            append([-np.trace(state[i] * logm(state[i]))])
+            S.append([-np.trace(state[i] * logm(state[i]))])
         
         return S
 
 
 params = dict()
 params = {
-          "N": 7,
-          "c": [0,1],
+          "N": 3,
+          "ce": [0,1],
           "omega": [2500*1e3,10000*1e3,8500*1e3,7000*1e3,5500*1e3,4000*1e3,2500*1e3,1000*1e3],
           "A": [1.20*1e6,1.18*1e6,1.16*1e6,1.14*1e6,1.12*1e6,1.10*1e6,1.08*1e6],
           "n": 1,
@@ -191,14 +202,30 @@ params = {
           "option": 'U'
           }
 
-c_init = qt.ket2dm(params['c'][0]*qt.basis(2,1)+params['c'][1]*qt.basis(2,0))
-env_init = tensor_power(qt.ket2dm(qt.basis(2,1)), params['N'])  # (2,1) is ground state
+c_init = qt.ket2dm(params['ce'][0]*qt.basis(2,1)+params['ce'][1]*qt.basis(2,0))
+#env_init = tensor_power(qt.ket2dm(qt.basis(2,1)), params['N'])  # (2,1) is ground state
 #env_init = tensor_power(qt.Qobj([[1/2,0],[0,1/2]]), params['N'])  # mixed state
 
+cn = []  # random nuclear spin state
+dim = np.power(2,params['N'])
+cn.append(random.uniform(0,1))
+for _ in range(0,int(dim)-2):
+    cn.append(random.uniform(0,1-sum(cn)))
+cn.append(1-sum(cn))
+cn = np.sqrt(cn)
+
+bi = list(product(range(2), repeat=params['N']))  # binary sequence
+zero = qt.Qobj(np.zeros((2, 1)))
+env_init = tensor_power(zero, params['N'])
+for i in range(0,dim):
+    sub = bi2basis(bi[i])
+    env_init += cn[i] * sub
+env_init = qt.ket2dm(env_init)
+
 # selection
-# 1 for finding other fidelities when one nuclear spin reaches its climax under specific omega0
-# 2 for finding omega0
-# 3 for operator fidelity
+## 1 for finding other fidelities when one nuclear spin reaches its climax under specific omega0
+## 2 for finding omega0
+## 3 for operator fidelity
 find='2'
 
 if find=='1':
@@ -211,58 +238,58 @@ if find=='1':
     fidm_1 = max(fid[1])
     fidm_2 = max(fid[2])
     fidm_3 = max(fid[3])
-    fidm_4 = max(fid[4])
-    fidm_5 = max(fid[5])
-    fidm_6 = max(fid[6])
-    fidm_7 = max(fid[7])
+#    fidm_4 = max(fid[4])
+#    fidm_5 = max(fid[5])
+#    fidm_6 = max(fid[6])
+#    fidm_7 = max(fid[7])
     
     pos_e = []
-    appende = pos_e.append
+#    appende = pos_e.append
     pos_e.append(fid[0].index(fidm_e))  # position when a nuclear spin reaches maximal fidelity
     for i in range(0,model.N+1):
-        appende(fid[i][pos_e[0]])
+        pos_e.append(fid[i][pos_e[0]])
         
     pos_1 = []
-    append1 = pos_1.append
+#    append1 = pos_1.append
     pos_1.append(fid[1].index(fidm_1))
     for i in range(0,model.N+1):
-        append1(fid[i][pos_1[0]])
+        pos_1.append(fid[i][pos_1[0]])
         
     pos_2 = []
-    append2 = pos_2.append
+#    append2 = pos_2.append
     pos_2.append(fid[2].index(fidm_2))
     for i in range(0,model.N+1):
-        append2(fid[i][pos_2[0]])
+        pos_2.append(fid[i][pos_2[0]])
         
     pos_3 = []
-    append3 = pos_3.append
+#    append3 = pos_3.append
     pos_3.append(fid[3].index(fidm_3))
     for i in range(0,model.N+1):
-        append3(fid[i][pos_3[0]])
+        pos_3.append(fid[i][pos_3[0]])
         
     pos_4 = []
-    append4 = pos_4.append
+#    append4 = pos_4.append
     pos_4.append(fid[4].index(fidm_4))
     for i in range(0,model.N+1):
-        append4(fid[i][pos_4[0]])
+        pos_4.append(fid[i][pos_4[0]])
     
     pos_5 = []
-    append5 = pos_5.append
+#    append5 = pos_5.append
     pos_5.append(fid[5].index(fidm_5))
     for i in range(0,model.N+1):
-        append5(fid[i][pos_5[0]])
+        pos_5.append(fid[i][pos_5[0]])
         
     pos_6 = []
-    append6 = pos_6.append
+#    append6 = pos_6.append
     pos_6.append(fid[6].index(fidm_6))
     for i in range(0,model.N+1):
-        append6(fid[i][pos_6[0]])
+        pos_6.append(fid[i][pos_6[0]])
         
     pos_7 = []
-    append7 = pos_7.append
+#    append7 = pos_7.append
     pos_7.append(fid[7].index(fidm_7))
     for i in range(0,model.N+1):
-        append7(fid[i][pos_7[0]])
+        pos_7.append(fid[i][pos_7[0]])
     
     # plot fidelity
     count = params['omega'][0] * model.tlist
@@ -316,28 +343,28 @@ elif find=='2':
     fidm_1 = []
     fidm_2 = []
     fidm_3 = []
-    fidm_4 = []
-    fidm_5 = []
-    fidm_6 = []
-    fidm_7 = []
+#    fidm_4 = []
+#    fidm_5 = []
+#    fidm_6 = []
+#    fidm_7 = []
     
     fidmw_e = 0.  # omega0 giving fid max
     fidmw_1 = 0.
     fidmw_2 = 0.
     fidmw_3 = 0.
-    fidmw_4 = 0.
-    fidmw_5 = 0.
-    fidmw_6 = 0.
-    fidmw_7 = 0.
+#    fidmw_4 = 0.
+#    fidmw_5 = 0.
+#    fidmw_6 = 0.
+#    fidmw_7 = 0.
     
     zero_array = [0 for i in range(int(params['N']))]
     fidma_1 = zero_array # fidelities of all nuclei at climax
     fidma_2 = zero_array
     fidma_3 = zero_array
-    fidma_4 = zero_array
-    fidma_5 = zero_array
-    fidma_6 = zero_array
-    fidma_7 = zero_array
+#    fidma_4 = zero_array
+#    fidma_5 = zero_array
+#    fidma_6 = zero_array
+#    fidma_7 = zero_array
     
     for omega0 in omega0_list:
         model = CentralSpin(params, omega0, c_init, env_init)
@@ -350,11 +377,11 @@ elif find=='2':
         fidm_1.append(max(fid[1]))
         fidm_2.append(max(fid[2]))
         fidm_3.append(max(fid[3]))
-        fidm_4.append(max(fid[4]))
-        fidm_5.append(max(fid[5]))
-        fidm_6.append(max(fid[6]))
-        fidm_7.append(max(fid[7]))
-    
+#        fidm_4.append(max(fid[4]))
+#        fidm_5.append(max(fid[5]))
+#        fidm_6.append(max(fid[6]))
+#        fidm_7.append(max(fid[7]))
+        
         if len(fidm_e)>=2:
             if fidm_e[-1]>max(fidm_e[:-1]):
                 fidmw_e = omega0 * 1e-6
@@ -363,64 +390,64 @@ elif find=='2':
                 fidma_1[0] = fidm_1[-1]
                 fidma_1[1] = fidm_2[-1]
                 fidma_1[2] = fidm_3[-1]
-                fidma_1[3] = fidm_4[-1]
-                fidma_1[4] = fidm_5[-1]
-                fidma_1[5] = fidm_6[-1]
-                fidma_1[6] = fidm_7[-1]
+#                fidma_1[3] = fidm_4[-1]
+#                fidma_1[4] = fidm_5[-1]
+#                fidma_1[5] = fidm_6[-1]
+#                fidma_1[6] = fidm_7[-1]
             if fidm_2[-1]>max(fidm_2[:-1]):
                 fidmw_2 = omega0 * 1e-6
                 fidma_2[0] = fidm_1[-1]
                 fidma_2[1] = fidm_2[-1]
                 fidma_2[2] = fidm_3[-1]
-                fidma_2[3] = fidm_4[-1]
-                fidma_2[4] = fidm_5[-1]
-                fidma_2[5] = fidm_6[-1]
-                fidma_2[6] = fidm_7[-1]
+#                fidma_2[3] = fidm_4[-1]
+#                fidma_2[4] = fidm_5[-1]
+#                fidma_2[5] = fidm_6[-1]
+#                fidma_2[6] = fidm_7[-1]
             if fidm_3[-1]>max(fidm_3[:-1]):
                 fidmw_3 = omega0 * 1e-6
                 fidma_3[0] = fidm_1[-1]
                 fidma_3[1] = fidm_2[-1]
                 fidma_3[2] = fidm_3[-1]
-                fidma_3[3] = fidm_4[-1]
-                fidma_3[4] = fidm_5[-1]
-                fidma_3[5] = fidm_6[-1]
-                fidma_3[6] = fidm_7[-1]
-            if fidm_4[-1]>max(fidm_4[:-1]):
-                fidmw_4 = omega0 * 1e-6
-                fidma_4[0] = fidm_1[-1]
-                fidma_4[1] = fidm_2[-1]
-                fidma_4[2] = fidm_3[-1]
-                fidma_4[3] = fidm_4[-1]
-                fidma_4[4] = fidm_5[-1]
-                fidma_4[5] = fidm_6[-1]
-                fidma_4[6] = fidm_7[-1]
-            if fidm_5[-1]>max(fidm_5[:-1]):
-                fidmw_5 = omega0 * 1e-6
-                fidma_5[0] = fidm_1[-1]
-                fidma_5[1] = fidm_2[-1]
-                fidma_5[2] = fidm_3[-1]
-                fidma_5[3] = fidm_4[-1]
-                fidma_5[4] = fidm_5[-1]
-                fidma_5[5] = fidm_6[-1]
-                fidma_5[6] = fidm_7[-1]
-            if fidm_6[-1]>max(fidm_6[:-1]):
-                fidmw_6 = omega0 * 1e-6
-                fidma_6[0] = fidm_1[-1]
-                fidma_6[1] = fidm_2[-1]
-                fidma_6[2] = fidm_3[-1]
-                fidma_6[3] = fidm_4[-1]
-                fidma_6[4] = fidm_5[-1]
-                fidma_6[5] = fidm_6[-1]
-                fidma_6[6] = fidm_7[-1]
-            if fidm_7[-1]>max(fidm_7[:-1]):
-                fidmw_7 = omega0 * 1e-6
-                fidma_7[0] = fidm_1[-1]
-                fidma_7[1] = fidm_2[-1]
-                fidma_7[2] = fidm_3[-1]
-                fidma_7[3] = fidm_4[-1]
-                fidma_7[4] = fidm_5[-1]
-                fidma_7[5] = fidm_6[-1]
-                fidma_7[6] = fidm_7[-1]
+#                fidma_3[3] = fidm_4[-1]
+#                fidma_3[4] = fidm_5[-1]
+#                fidma_3[5] = fidm_6[-1]
+#                fidma_3[6] = fidm_7[-1]
+#            if fidm_4[-1]>max(fidm_4[:-1]):
+#                fidmw_4 = omega0 * 1e-6
+#                fidma_4[0] = fidm_1[-1]
+#                fidma_4[1] = fidm_2[-1]
+#                fidma_4[2] = fidm_3[-1]
+#                fidma_4[3] = fidm_4[-1]
+#                fidma_4[4] = fidm_5[-1]
+#                fidma_4[5] = fidm_6[-1]
+#                fidma_4[6] = fidm_7[-1]
+#            if fidm_5[-1]>max(fidm_5[:-1]):
+#                fidmw_5 = omega0 * 1e-6
+#                fidma_5[0] = fidm_1[-1]
+#                fidma_5[1] = fidm_2[-1]
+#                fidma_5[2] = fidm_3[-1]
+#                fidma_5[3] = fidm_4[-1]
+#                fidma_5[4] = fidm_5[-1]
+#                fidma_5[5] = fidm_6[-1]
+#                fidma_5[6] = fidm_7[-1]
+#            if fidm_6[-1]>max(fidm_6[:-1]):
+#                fidmw_6 = omega0 * 1e-6
+#                fidma_6[0] = fidm_1[-1]
+#                fidma_6[1] = fidm_2[-1]
+#                fidma_6[2] = fidm_3[-1]
+#                fidma_6[3] = fidm_4[-1]
+#                fidma_6[4] = fidm_5[-1]
+#                fidma_6[5] = fidm_6[-1]
+#                fidma_6[6] = fidm_7[-1]
+#            if fidm_7[-1]>max(fidm_7[:-1]):
+#                fidmw_7 = omega0 * 1e-6
+#                fidma_7[0] = fidm_1[-1]
+#                fidma_7[1] = fidm_2[-1]
+#                fidma_7[2] = fidm_3[-1]
+#                fidma_7[3] = fidm_4[-1]
+#                fidma_7[4] = fidm_5[-1]
+#                fidma_7[5] = fidm_6[-1]
+#                fidma_7[6] = fidm_7[-1]
 
         #exp_x, exp_y, exp_z = model.expect(state_list)
         
@@ -442,17 +469,17 @@ elif find=='2':
         l2, = plt.plot(count, fid[1])
         l3, = plt.plot(count, fid[2])
         l4, = plt.plot(count, fid[3])
-        l5, = plt.plot(count, fid[4])
-        l6, = plt.plot(count, fid[5])
-        l7, = plt.plot(count, fid[6])
-        l8, = plt.plot(count, fid[7])
+#        l5, = plt.plot(count, fid[4])
+#        l6, = plt.plot(count, fid[5])
+#        l7, = plt.plot(count, fid[6])
+#        l8, = plt.plot(count, fid[7])
         
         plt.rcParams['font.sans-serif'] = ['SimHei']  # Chinese character
         plt.rcParams['axes.unicode_minus'] = False
         
-#        plt.legend(handles=[l1, l2, l3, l4, ], 
-#                   labels=[r'电子', r'核1', r'核2', r'核3', ], 
-#                   loc='center right', fontsize=16)
+        plt.legend(handles=[l1, l2, l3, l4, ], 
+                   labels=[r'电子', r'核1', r'核2', r'核3', ], 
+                   loc='center right', fontsize=16)
 #        plt.legend(handles=[l1, l2, l3, l4, l5, ], 
 #                   labels=[r'电子', r'核1', r'核2', r'核3', 
 #                           r'核4', ], 
@@ -465,17 +492,17 @@ elif find=='2':
 #                   labels=[r'电子', r'核1', r'核2', r'核3', 
 #                           r'核4', r'核5', r'核6', ], 
 #                   loc='center right', fontsize=16)
-        plt.legend(handles=[l1, l2, l3, l4, l5, l6, l7, l8, ], 
-                   labels=[r'电子', r'核1', r'核2', r'核3', 
-                           r'核4', r'核5', r'核6', '核7', ], 
-                   loc='center right', fontsize=16)        
+#        plt.legend(handles=[l1, l2, l3, l4, l5, l6, l7, l8, ], 
+#                   labels=[r'电子', r'核1', r'核2', r'核3', 
+#                           r'核4', r'核5', r'核6', '核7', ], 
+#                   loc='center right', fontsize=16)        
 
         plt.xlabel(r'$\omega t$', fontsize=16)
         plt.ylabel(r'$F$', fontsize=16)
         plt.xticks(fontsize=14)
         plt.yticks(fontsize=14)
         plt.title(r'$ F-\omega t, \omega_0=%.2f \times 10^6 rad/s$'%(omega0*1e-6), fontsize=20)
-        plt.savefig(r'D:\transfer\trans_code\results_qd\grad\N=7_新basis_0.01步长\%.2f.png'%(omega0*1e-6))  # change N
+        plt.savefig(r'D:\transfer\trans_code\results_qd\grad\rand1\%.2f.png'%(omega0*1e-6))  # change N
         
         fig = plt.figure(figsize=(8,6))
         plt.plot(count, S)
@@ -485,7 +512,7 @@ elif find=='2':
         plt.yticks(fontsize=14)
         plt.ticklabel_format(style='sci',scilimits=(0,0),axis='y')
         plt.title(r'$ S-\omega t, \omega_0=%.2f \times 10^6 rad/s$'%(omega0*1e-6), fontsize=20)
-        plt.savefig(r'D:\transfer\trans_code\results_qd\grad\N=7_新basis_0.01步长\S_%.2f.png'%(omega0*1e-6))  # change N
+        plt.savefig(r'D:\transfer\trans_code\results_qd\grad\rand1\S_%.2f.png'%(omega0*1e-6))  # change N
         
 #    print("fidmw:", fidmw_e, fidmw_1, fidmw_2, fidmw_3, fidmw_4)
     
@@ -495,17 +522,17 @@ elif find=='2':
     l2, = plt.plot(omega0_list_, fidm_1)
     l3, = plt.plot(omega0_list_, fidm_2)
     l4, = plt.plot(omega0_list_, fidm_3)
-    l5, = plt.plot(omega0_list_, fidm_4)
-    l6, = plt.plot(omega0_list_, fidm_5)
-    l7, = plt.plot(omega0_list_, fidm_6)
-    l8, = plt.plot(omega0_list_, fidm_7)
+#    l5, = plt.plot(omega0_list_, fidm_4)
+#    l6, = plt.plot(omega0_list_, fidm_5)
+#    l7, = plt.plot(omega0_list_, fidm_6)
+#    l8, = plt.plot(omega0_list_, fidm_7)
     
     plt.rcParams['font.sans-serif'] = ['SimHei']  # Chinese character
     plt.rcParams['axes.unicode_minus'] = False
     
-#    plt.legend(handles=[l1, l2, l3, l4, ], 
-#               labels=[r'电子', r'核1', r'核2', r'核3', ], 
-#               loc='best', fontsize=16)
+    plt.legend(handles=[l1, l2, l3, l4, ], 
+               labels=[r'电子', r'核1', r'核2', r'核3', ], 
+               loc='best', fontsize=16)
 #    plt.legend(handles=[l1, l2, l3, l4, l5, ],
 #               labels=[r'电子', r'核1', r'核2', r'核3', 
 #                       r'核4', ], 
@@ -518,17 +545,17 @@ elif find=='2':
 #               labels=[r'电子', r'核1', r'核2', r'核3', 
 #                       r'核4', r'核5', r'核6', ], 
 #               loc='lower right', fontsize=16)
-    plt.legend(handles=[l1, l2, l3, l4, l5, l6, l7, l8, ], 
-               labels=[r'电子', r'核1', r'核2', r'核3', 
-                       r'核4', r'核5', r'核6', '核7', ], 
-               loc='lower right', fontsize=16)
+#    plt.legend(handles=[l1, l2, l3, l4, l5, l6, l7, l8, ], 
+#               labels=[r'电子', r'核1', r'核2', r'核3', 
+#                       r'核4', r'核5', r'核6', '核7', ], 
+#               loc='lower right', fontsize=16)
 
     plt.xlabel(r'$\omega_0 (\times 10^6 rad/s)$', fontsize=16)
     plt.ylabel(r'$F_{max}$', fontsize=16)
     plt.xticks(fontsize=14)
     plt.yticks(fontsize=14)
     plt.title(r'$F_{max} - \omega_0$', fontsize=20)
-    plt.savefig(r'D:\transfer\trans_code\results_qd\grad\N=7_新basis_0.01步长\fidmax.png')  # change N
+    plt.savefig(r'D:\transfer\trans_code\results_qd\grad\rand1\fidmax.png')  # change N
 
 elif find=='3':
     model = CentralSpin(params, params['omega'][0], c_init, env_init)
