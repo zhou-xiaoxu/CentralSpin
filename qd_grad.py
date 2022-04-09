@@ -492,39 +492,18 @@ if find=='1':
     for i in range(0,len(model.tlist)):
         twoS.append(S[0][0][i] + S[1][0][i])
     
+    # plot entropy of electron and the selected nuclear spin
+    select = 1  # select nth nuclear spin
+    twoS = []
+    for i in range(0,len(model.tlist)):
+        twoS.append(S[0][i][0] + S[select][i][0])
+    
     # plot entropy of two spins
     fig = plt.figure(figsize=(8,6))
-    l33, = plt.plot(count, twoS[0])
-    l34, = plt.plot(count, twoS[1])
-    l35, = plt.plot(count, twoS[2])
-    l36, = plt.plot(count, twoS[3])
-    l37, = plt.plot(count, twoS[4])
-    l38, = plt.plot(count, twoS[5])
-    l39, = plt.plot(count, twoS[6])
-    l40, = plt.plot(count, twoS[7])
-    
-#    plt.legend(handles=[l33, l34, l35, l36, ], 
-#               labels=[r'电子', r'核1', r'核2', r'核3', ], 
-#               loc='center right', fontsize=16)
-#    plt.legend(handles=[l33, l34, l35, l36, l37, ], 
-#               labels=[r'电子', r'核1', r'核2', r'核3', 
-#                       r'核4', ], 
-#               loc='center right', fontsize=16)
-#    plt.legend(handles=[l33, l34, l35, l36, l37, l38, ], 
-#               labels=[r'电子', r'核1', r'核2', r'核3', 
-#                       r'核4', r'核5', ], 
-#               loc='center right', fontsize=16)
-#    plt.legend(handles=[l33, l34, l35, l36, l37, l38, l39, ], 
-#               labels=[r'电子', r'核1', r'核2', r'核3', 
-#                       r'核4', r'核5', r'核6', ], 
-#               loc='center right', fontsize=16)
-    plt.legend(handles=[l33, l34, l35, l36, l37, l38, l39, l40, ], 
-               labels=[r'电子', r'核1', r'核2', r'核3', 
-                       r'核4', r'核5', r'核6', '核7', ], 
-               loc='center right', fontsize=16)    
+    l33, = plt.plot(count, twoS)  
 
     plt.xlabel(r'$\omega t$', fontsize=16)
-    plt.ylabel(r'$S_{rel}$', fontsize=16)
+    plt.ylabel(r'$S_{sel}$', fontsize=16)
     plt.xticks(fontsize=14)
     plt.yticks(fontsize=14)
     plt.title(r'$S_{sel} - \omega t$', fontsize=20)  # sel = selected
