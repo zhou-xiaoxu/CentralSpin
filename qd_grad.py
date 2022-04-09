@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 @author: Xiaoxu Zhou
-Latest update: 04/07/2022
+Latest update: 04/10/2022
 """
 
 import numpy as np
@@ -215,7 +215,7 @@ params = {
 
 c_init = qt.ket2dm(params['ce'][0]*qt.basis(2,1)+params['ce'][1]*qt.basis(2,0))
 env_init = tensor_power(qt.ket2dm(qt.basis(2,1)), params['N'])  # (2,1) is ground state
-#env_init = tensor_power(qt.Qobj([[1/2,0],[0,1/2]]), params['N'])  # mixed state
+#env_init = tensor_power(qt.Qobj([[2/3,0],[0,1/3]]), params['N'])  # mixed state
 
 dim = np.power(2,params['N'])
 
@@ -248,7 +248,7 @@ dim = np.power(2,params['N'])
 ## 1 for finding other fidelities when one nuclear spin reaches its climax under specific omega0
 ## 2 for finding omega0
 ## 3 for operator fidelity
-find='1'
+find='2'
 
 if find=='1':
     model = CentralSpin(params, params['omega'][0], c_init, env_init)
@@ -326,7 +326,7 @@ if find=='1':
     l6, = plt.plot(count, fid[5])
     l7, = plt.plot(count, fid[6])
     l8, = plt.plot(count, fid[7])
-    
+#    
     plt.rcParams['font.sans-serif'] = ['SimHei']  # Chinese character
     plt.rcParams['axes.unicode_minus'] = False
     
@@ -451,14 +451,14 @@ if find=='1':
     
     # plot relative entropy
     fig = plt.figure(figsize=(8,6))
-    l25, = plt.plot(count, S[0])
-    l26, = plt.plot(count, S[1])
-    l27, = plt.plot(count, S[2])
-    l28, = plt.plot(count, S[3])
-    l29, = plt.plot(count, S[4])
-    l30, = plt.plot(count, S[5])
-    l31, = plt.plot(count, S[6])
-    l32, = plt.plot(count, S[7])
+    l25, = plt.plot(count, relS[0])
+    l26, = plt.plot(count, relS[1])
+    l27, = plt.plot(count, relS[2])
+    l28, = plt.plot(count, relS[3])
+    l29, = plt.plot(count, relS[4])
+    l30, = plt.plot(count, relS[5])
+    l31, = plt.plot(count, relS[6])
+    l32, = plt.plot(count, relS[7])
     
 #    plt.legend(handles=[l25, l26, l27, l28, ], 
 #               labels=[r'电子', r'核1', r'核2', r'核3', ], 
@@ -486,7 +486,50 @@ if find=='1':
     plt.yticks(fontsize=14)
     plt.title(r'$S_{rel} - \omega t$', fontsize=20)
     plt.savefig(r'D:\transfer\trans_code\results_qd\grad\N=7_新basis_0.01步长_30mus\data\relS_%.2f.png'%(params['omega'][0]*1e-6))
+    
+    # plot entropy of electron and the selected nuclear spin
+    twoS = []
+    for i in range(0,len(model.tlist)):
+        twoS.append(S[0][0][i] + S[1][0][i])
+    
+    # plot entropy of two spins
+    fig = plt.figure(figsize=(8,6))
+    l33, = plt.plot(count, twoS[0])
+    l34, = plt.plot(count, twoS[1])
+    l35, = plt.plot(count, twoS[2])
+    l36, = plt.plot(count, twoS[3])
+    l37, = plt.plot(count, twoS[4])
+    l38, = plt.plot(count, twoS[5])
+    l39, = plt.plot(count, twoS[6])
+    l40, = plt.plot(count, twoS[7])
+    
+#    plt.legend(handles=[l33, l34, l35, l36, ], 
+#               labels=[r'电子', r'核1', r'核2', r'核3', ], 
+#               loc='center right', fontsize=16)
+#    plt.legend(handles=[l33, l34, l35, l36, l37, ], 
+#               labels=[r'电子', r'核1', r'核2', r'核3', 
+#                       r'核4', ], 
+#               loc='center right', fontsize=16)
+#    plt.legend(handles=[l33, l34, l35, l36, l37, l38, ], 
+#               labels=[r'电子', r'核1', r'核2', r'核3', 
+#                       r'核4', r'核5', ], 
+#               loc='center right', fontsize=16)
+#    plt.legend(handles=[l33, l34, l35, l36, l37, l38, l39, ], 
+#               labels=[r'电子', r'核1', r'核2', r'核3', 
+#                       r'核4', r'核5', r'核6', ], 
+#               loc='center right', fontsize=16)
+    plt.legend(handles=[l33, l34, l35, l36, l37, l38, l39, l40, ], 
+               labels=[r'电子', r'核1', r'核2', r'核3', 
+                       r'核4', r'核5', r'核6', '核7', ], 
+               loc='center right', fontsize=16)    
 
+    plt.xlabel(r'$\omega t$', fontsize=16)
+    plt.ylabel(r'$S_{rel}$', fontsize=16)
+    plt.xticks(fontsize=14)
+    plt.yticks(fontsize=14)
+    plt.title(r'$S_{sel} - \omega t$', fontsize=20)  # sel = selected
+    plt.savefig(r'D:\transfer\trans_code\results_qd\grad\N=7_新basis_0.01步长_30mus\data\twoS_%.2f.png'%(params['omega'][0]*1e-6))
+    
 
 elif find=='2':
     omega0_list = np.arange(0.1*1e6, 11.0*1e6+0.01*1e6, 0.01*1e6)
@@ -659,15 +702,15 @@ elif find=='2':
         plt.title(r'$ F-\omega t, \omega_0=%.2f \times 10^6 rad/s$'%(omega0*1e-6), fontsize=20)
         plt.savefig(r'D:\transfer\trans_code\results_qd\grad\N=7_新basis_0.01步长_30mus\%.2f.png'%(omega0*1e-6))  # change N
 
-#        fig = plt.figure(figsize=(8,6))
-#        plt.plot(count, S)
-#        plt.xlabel(r'$\omega t$', fontsize=16)
-#        plt.ylabel(r'$S$', fontsize=16)
-#        plt.xticks(fontsize=14)
-#        plt.yticks(fontsize=14)
-#        plt.ticklabel_format(style='sci',scilimits=(0,0),axis='y')
-#        plt.title(r'$ S-\omega t, \omega_0=%.2f \times 10^6 rad/s$'%(omega0*1e-6), fontsize=20)
-#        plt.savefig(r'D:\transfer\trans_code\results_qd\grad1小_0.01步长_cn\S_%.2f.png'%(omega0*1e-6))  # change N
+        fig = plt.figure(figsize=(8,6))
+        plt.plot(count, S)
+        plt.xlabel(r'$\omega t$', fontsize=16)
+        plt.ylabel(r'$S$', fontsize=16)
+        plt.xticks(fontsize=14)
+        plt.yticks(fontsize=14)
+        plt.ticklabel_format(style='sci',scilimits=(0,0),axis='y')
+        plt.title(r'$ S-\omega t, \omega_0=%.2f \times 10^6 rad/s$'%(omega0*1e-6), fontsize=20)
+        plt.savefig(r'D:\transfer\trans_code\results_qd\grad\N=7_新basis_0.01步长_30mus\S_%.2f.png'%(omega0*1e-6))  # change N
         
 #    print("fidmw:", fidmw_e, fidmw_1, fidmw_2, fidmw_3, fidmw_4)
     
