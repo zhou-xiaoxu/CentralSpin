@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 @author: Xiaoxu Zhou
-Latest update: 04/10/2022
+Latest update: 04/11/2022
 """
 
 import numpy as np
@@ -188,7 +188,7 @@ class CentralSpin(object):
             S.append([-np.trace(state[i] * logm(state[i]))])
         
         return S
-    
+        
     def entropy_rel(self, state):
         """
         Calculate relative entropy between nuclear spin state and target state
@@ -205,13 +205,14 @@ params = dict()
 params = {
           "N": 7,
           "ce": [0,1],
-          "omega": [2500*1e3,10000*1e3,8500*1e3,7000*1e3,5500*1e3,4000*1e3,2500*1e3,1000*1e3],
+          "omega": [1430*1e3,10000*1e3,8500*1e3,7000*1e3,5500*1e3,4000*1e3,2500*1e3,1000*1e3],
           "A": [1.20*1e6,1.18*1e6,1.16*1e6,1.14*1e6,1.12*1e6,1.10*1e6,1.08*1e6],
           "n": 1,
           "T": 30e-6,
           "dt": 15e-8,
           "option": 'U'
           }
+select = 1  # select nth nuclear spin
 
 c_init = qt.ket2dm(params['ce'][0]*qt.basis(2,1)+params['ce'][1]*qt.basis(2,0))
 env_init = tensor_power(qt.ket2dm(qt.basis(2,1)), params['N'])  # (2,1) is ground state
@@ -248,7 +249,7 @@ dim = np.power(2,params['N'])
 ## 1 for finding other fidelities when one nuclear spin reaches its climax under specific omega0
 ## 2 for finding omega0
 ## 3 for operator fidelity
-find='2'
+find='1'
 
 if find=='1':
     model = CentralSpin(params, params['omega'][0], c_init, env_init)
@@ -490,12 +491,6 @@ if find=='1':
     # plot entropy of electron and the selected nuclear spin
     twoS = []
     for i in range(0,len(model.tlist)):
-        twoS.append(S[0][0][i] + S[1][0][i])
-    
-    # plot entropy of electron and the selected nuclear spin
-    select = 1  # select nth nuclear spin
-    twoS = []
-    for i in range(0,len(model.tlist)):
         twoS.append(S[0][i][0] + S[select][i][0])
     
     # plot entropy of two spins
@@ -509,6 +504,95 @@ if find=='1':
     plt.title(r'$S_{sel} - \omega t$', fontsize=20)  # sel = selected
     plt.savefig(r'D:\transfer\trans_code\results_qd\grad\N=7_新basis_0.01步长_30mus\data\twoS_%.2f.png'%(params['omega'][0]*1e-6))
     
+    # composite system AB
+    rhoAB = []  # index i corresponds to the (i+1)th nuclear spin
+    for i in range(1,params['N']+1):
+        rhoAB.append([qt.tensor([state_list[i][j], state_list[0][j]]) for j in range(0,len(model.tlist))])
+    
+    # joint entropy
+    jS = []  # index i corresponds to the (i+1)th nuclear spin
+    for i in range(0,params['N']):
+        jS.append(list(map(lambda x:-np.trace(x*logm(x)), rhoAB[i])))
+    
+    # plot joint entropy
+    fig = plt.figure(figsize=(8,6))
+    l34, = plt.plot(count, jS[0])
+    l35, = plt.plot(count, jS[1])
+    l36, = plt.plot(count, jS[2])
+    l37, = plt.plot(count, jS[3])
+    l38, = plt.plot(count, jS[4])
+    l39, = plt.plot(count, jS[5])
+    l40, = plt.plot(count, jS[6])
+    
+#    plt.legend(handles=[l34, l35, l36, ], 
+#               labels=[r'核1', r'核2', r'核3', ], 
+#               loc='center right', fontsize=16)
+#    plt.legend(handles=[l34, l35, l36, l37, ], 
+#               labels=[r'核1', r'核2', r'核3', 
+#                       r'核4', ], 
+#               loc='center right', fontsize=16)
+#    plt.legend(handles=[l34, l35, l36, l37, l38, ], 
+#               labels=[r'核1', r'核2', r'核3', 
+#                       r'核4', r'核5', ], 
+#               loc='center right', fontsize=16)
+#    plt.legend(handles=[l34, l35, l36, l37, l38, l39, ], 
+#               labels=[r'核1', r'核2', r'核3', 
+#                       r'核4', r'核5', r'核6', ], 
+#               loc='center right', fontsize=16)
+    plt.legend(handles=[l34, l35, l36, l37, l38, l39, l40, ], 
+               labels=[r'核1', r'核2', r'核3', 
+                       r'核4', r'核5', r'核6', '核7', ], 
+               loc='center right', fontsize=16)    
+
+    plt.xlabel(r'$\omega t$', fontsize=16)
+    plt.ylabel(r'$S_{j}$', fontsize=16)
+    plt.xticks(fontsize=14)
+    plt.yticks(fontsize=14)
+    plt.title(r'$S_{j} - \omega t$', fontsize=20)
+    plt.savefig(r'D:\transfer\trans_code\results_qd\grad\N=7_新basis_0.01步长_30mus\data\jS_%.2f.png'%(params['omega'][0]*1e-6))
+    
+    # mutual entropy
+    mS = []  # index i corresponds to the (i+1)th nuclear spin
+    for i in range(0,params['N']):
+        mS.append([S[0][j][0] + S[i][j][0] - jS[i][j] for j in range(0,len(model.tlist))])
+    
+    # plot mutual entropy
+    fig = plt.figure(figsize=(8,6))
+    l41, = plt.plot(count, mS[0])
+    l42, = plt.plot(count, mS[1])
+    l43, = plt.plot(count, mS[2])
+    l44, = plt.plot(count, mS[3])
+    l45, = plt.plot(count, mS[4])
+    l46, = plt.plot(count, mS[5])
+    l47, = plt.plot(count, mS[6])
+    
+#    plt.legend(handles=[l41, l42, l43, ], 
+#               labels=[r'核1', r'核2', r'核3', ], 
+#               loc='center right', fontsize=16)
+#    plt.legend(handles=[l41, l42, l43, l44, ], 
+#               labels=[r'核1', r'核2', r'核3', 
+#                       r'核4', ], 
+#               loc='center right', fontsize=16)
+#    plt.legend(handles=[l41, l42, l43, l44, l45, ], 
+#               labels=[r'核1', r'核2', r'核3', 
+#                       r'核4', r'核5', ], 
+#               loc='center right', fontsize=16)
+#    plt.legend(handles=[l41, l42, l43, l44, l45, l46, ], 
+#               labels=[r'核1', r'核2', r'核3', 
+#                       r'核4', r'核5', r'核6', ], 
+#               loc='center right', fontsize=16)
+    plt.legend(handles=[l41, l42, l43, l44, l45, l46, l47, ], 
+               labels=[r'核1', r'核2', r'核3', 
+                       r'核4', r'核5', r'核6', '核7', ], 
+               loc='center right', fontsize=16)    
+
+    plt.xlabel(r'$\omega t$', fontsize=16)
+    plt.ylabel(r'$S_{m}$', fontsize=16)
+    plt.xticks(fontsize=14)
+    plt.yticks(fontsize=14)
+    plt.title(r'$S_{m} - \omega t$', fontsize=20)
+    plt.savefig(r'D:\transfer\trans_code\results_qd\grad\N=7_新basis_0.01步长_30mus\data\mS_%.2f.png'%(params['omega'][0]*1e-6))
+    
 
 elif find=='2':
     omega0_list = np.arange(0.1*1e6, 11.0*1e6+0.01*1e6, 0.01*1e6)
@@ -520,28 +604,28 @@ elif find=='2':
     fidm_1 = []
     fidm_2 = []
     fidm_3 = []
-    fidm_4 = []
-    fidm_5 = []
-    fidm_6 = []
-    fidm_7 = []
+#    fidm_4 = []
+#    fidm_5 = []
+#    fidm_6 = []
+#    fidm_7 = []
     
     fidmw_e = 0.  # omega0 giving fid max
     fidmw_1 = 0.
     fidmw_2 = 0.
     fidmw_3 = 0.
-    fidmw_4 = 0.
-    fidmw_5 = 0.
-    fidmw_6 = 0.
-    fidmw_7 = 0.
+#    fidmw_4 = 0.
+#    fidmw_5 = 0.
+#    fidmw_6 = 0.
+#    fidmw_7 = 0.
     
     zero_array = [0 for i in range(int(params['N']))]
     fidma_1 = zero_array # fidelities of all nuclei at climax
     fidma_2 = zero_array
     fidma_3 = zero_array
-    fidma_4 = zero_array
-    fidma_5 = zero_array
-    fidma_6 = zero_array
-    fidma_7 = zero_array
+#    fidma_4 = zero_array
+#    fidma_5 = zero_array
+#    fidma_6 = zero_array
+#    fidma_7 = zero_array
     
     for omega0 in omega0_list:
         model = CentralSpin(params, omega0, c_init, env_init)
@@ -554,10 +638,10 @@ elif find=='2':
         fidm_1.append(max(fid[1]))
         fidm_2.append(max(fid[2]))
         fidm_3.append(max(fid[3]))
-        fidm_4.append(max(fid[4]))
-        fidm_5.append(max(fid[5]))
-        fidm_6.append(max(fid[6]))
-        fidm_7.append(max(fid[7]))
+#        fidm_4.append(max(fid[4]))
+#        fidm_5.append(max(fid[5]))
+#        fidm_6.append(max(fid[6]))
+#        fidm_7.append(max(fid[7]))
         
         if len(fidm_e)>=2:
             if fidm_e[-1]>max(fidm_e[:-1]):
@@ -567,64 +651,64 @@ elif find=='2':
                 fidma_1[0] = fidm_1[-1]
                 fidma_1[1] = fidm_2[-1]
                 fidma_1[2] = fidm_3[-1]
-                fidma_1[3] = fidm_4[-1]
-                fidma_1[4] = fidm_5[-1]
-                fidma_1[5] = fidm_6[-1]
-                fidma_1[6] = fidm_7[-1]
+#                fidma_1[3] = fidm_4[-1]
+#                fidma_1[4] = fidm_5[-1]
+#                fidma_1[5] = fidm_6[-1]
+#                fidma_1[6] = fidm_7[-1]
             if fidm_2[-1]>max(fidm_2[:-1]):
                 fidmw_2 = omega0 * 1e-6
                 fidma_2[0] = fidm_1[-1]
                 fidma_2[1] = fidm_2[-1]
                 fidma_2[2] = fidm_3[-1]
-                fidma_2[3] = fidm_4[-1]
-                fidma_2[4] = fidm_5[-1]
-                fidma_2[5] = fidm_6[-1]
-                fidma_2[6] = fidm_7[-1]
+#                fidma_2[3] = fidm_4[-1]
+#                fidma_2[4] = fidm_5[-1]
+#                fidma_2[5] = fidm_6[-1]
+#                fidma_2[6] = fidm_7[-1]
             if fidm_3[-1]>max(fidm_3[:-1]):
                 fidmw_3 = omega0 * 1e-6
                 fidma_3[0] = fidm_1[-1]
                 fidma_3[1] = fidm_2[-1]
                 fidma_3[2] = fidm_3[-1]
-                fidma_3[3] = fidm_4[-1]
-                fidma_3[4] = fidm_5[-1]
-                fidma_3[5] = fidm_6[-1]
-                fidma_3[6] = fidm_7[-1]
-            if fidm_4[-1]>max(fidm_4[:-1]):
-                fidmw_4 = omega0 * 1e-6
-                fidma_4[0] = fidm_1[-1]
-                fidma_4[1] = fidm_2[-1]
-                fidma_4[2] = fidm_3[-1]
-                fidma_4[3] = fidm_4[-1]
-                fidma_4[4] = fidm_5[-1]
-                fidma_4[5] = fidm_6[-1]
-                fidma_4[6] = fidm_7[-1]
-            if fidm_5[-1]>max(fidm_5[:-1]):
-                fidmw_5 = omega0 * 1e-6
-                fidma_5[0] = fidm_1[-1]
-                fidma_5[1] = fidm_2[-1]
-                fidma_5[2] = fidm_3[-1]
-                fidma_5[3] = fidm_4[-1]
-                fidma_5[4] = fidm_5[-1]
-                fidma_5[5] = fidm_6[-1]
-                fidma_5[6] = fidm_7[-1]
-            if fidm_6[-1]>max(fidm_6[:-1]):
-                fidmw_6 = omega0 * 1e-6
-                fidma_6[0] = fidm_1[-1]
-                fidma_6[1] = fidm_2[-1]
-                fidma_6[2] = fidm_3[-1]
-                fidma_6[3] = fidm_4[-1]
-                fidma_6[4] = fidm_5[-1]
-                fidma_6[5] = fidm_6[-1]
-                fidma_6[6] = fidm_7[-1]
-            if fidm_7[-1]>max(fidm_7[:-1]):
-                fidmw_7 = omega0 * 1e-6
-                fidma_7[0] = fidm_1[-1]
-                fidma_7[1] = fidm_2[-1]
-                fidma_7[2] = fidm_3[-1]
-                fidma_7[3] = fidm_4[-1]
-                fidma_7[4] = fidm_5[-1]
-                fidma_7[5] = fidm_6[-1]
-                fidma_7[6] = fidm_7[-1]
+#                fidma_3[3] = fidm_4[-1]
+#                fidma_3[4] = fidm_5[-1]
+#                fidma_3[5] = fidm_6[-1]
+#                fidma_3[6] = fidm_7[-1]
+#            if fidm_4[-1]>max(fidm_4[:-1]):
+#                fidmw_4 = omega0 * 1e-6
+#                fidma_4[0] = fidm_1[-1]
+#                fidma_4[1] = fidm_2[-1]
+#                fidma_4[2] = fidm_3[-1]
+#                fidma_4[3] = fidm_4[-1]
+#                fidma_4[4] = fidm_5[-1]
+#                fidma_4[5] = fidm_6[-1]
+#                fidma_4[6] = fidm_7[-1]
+#            if fidm_5[-1]>max(fidm_5[:-1]):
+#                fidmw_5 = omega0 * 1e-6
+#                fidma_5[0] = fidm_1[-1]
+#                fidma_5[1] = fidm_2[-1]
+#                fidma_5[2] = fidm_3[-1]
+#                fidma_5[3] = fidm_4[-1]
+#                fidma_5[4] = fidm_5[-1]
+#                fidma_5[5] = fidm_6[-1]
+#                fidma_5[6] = fidm_7[-1]
+#            if fidm_6[-1]>max(fidm_6[:-1]):
+#                fidmw_6 = omega0 * 1e-6
+#                fidma_6[0] = fidm_1[-1]
+#                fidma_6[1] = fidm_2[-1]
+#                fidma_6[2] = fidm_3[-1]
+#                fidma_6[3] = fidm_4[-1]
+#                fidma_6[4] = fidm_5[-1]
+#                fidma_6[5] = fidm_6[-1]
+#                fidma_6[6] = fidm_7[-1]
+#            if fidm_7[-1]>max(fidm_7[:-1]):
+#                fidmw_7 = omega0 * 1e-6
+#                fidma_7[0] = fidm_1[-1]
+#                fidma_7[1] = fidm_2[-1]
+#                fidma_7[2] = fidm_3[-1]
+#                fidma_7[3] = fidm_4[-1]
+#                fidma_7[4] = fidm_5[-1]
+#                fidma_7[5] = fidm_6[-1]
+#                fidma_7[6] = fidm_7[-1]
 
         #exp_x, exp_y, exp_z = model.expect(state_list)
         
@@ -646,17 +730,17 @@ elif find=='2':
         l2, = plt.plot(count, fid[1])
         l3, = plt.plot(count, fid[2])
         l4, = plt.plot(count, fid[3])
-        l5, = plt.plot(count, fid[4])
-        l6, = plt.plot(count, fid[5])
-        l7, = plt.plot(count, fid[6])
-        l8, = plt.plot(count, fid[7])
+#        l5, = plt.plot(count, fid[4])
+#        l6, = plt.plot(count, fid[5])
+#        l7, = plt.plot(count, fid[6])
+#        l8, = plt.plot(count, fid[7])
         
         plt.rcParams['font.sans-serif'] = ['SimHei']  # Chinese character
         plt.rcParams['axes.unicode_minus'] = False
         
-#        plt.legend(handles=[l1, l2, l3, l4, ], 
-#                   labels=[r'电子', r'核1', r'核2', r'核3', ], 
-#                   loc='center right', fontsize=16)
+        plt.legend(handles=[l1, l2, l3, l4, ], 
+                   labels=[r'电子', r'核1', r'核2', r'核3', ], 
+                   loc='center right', fontsize=16)
 #        plt.legend(handles=[l1, l2, l3, l4, l5, ], 
 #                   labels=[r'电子', r'核1', r'核2', r'核3', 
 #                           r'核4', ], 
@@ -669,17 +753,17 @@ elif find=='2':
 #                   labels=[r'电子', r'核1', r'核2', r'核3', 
 #                           r'核4', r'核5', r'核6', ], 
 #                   loc='center right', fontsize=16)
-        plt.legend(handles=[l1, l2, l3, l4, l5, l6, l7, l8, ], 
-                   labels=[r'电子', r'核1', r'核2', r'核3', 
-                           r'核4', r'核5', r'核6', '核7', ], 
-                   loc='center right', fontsize=16)        
+#        plt.legend(handles=[l1, l2, l3, l4, l5, l6, l7, l8, ], 
+#                   labels=[r'电子', r'核1', r'核2', r'核3', 
+#                           r'核4', r'核5', r'核6', '核7', ], 
+#                   loc='center right', fontsize=16)        
 
         plt.xlabel(r'$\omega t$', fontsize=16)
         plt.ylabel(r'$F$', fontsize=16)
         plt.xticks(fontsize=14)
         plt.yticks(fontsize=14)
         plt.title(r'$ F-\omega t, \omega_0=%.2f \times 10^6 rad/s$'%(omega0*1e-6), fontsize=20)
-        plt.savefig(r'D:\transfer\trans_code\results_qd\grad\N=7_新basis_0.01步长_30mus\%.2f.png'%(omega0*1e-6))  # change N
+        plt.savefig(r'D:\transfer\trans_code\results_qd\grad\init6_0.01步长_cn_15mus\%.2f.png'%(omega0*1e-6))  # change N
 
         fig = plt.figure(figsize=(8,6))
         plt.plot(count, S)
@@ -689,7 +773,7 @@ elif find=='2':
         plt.yticks(fontsize=14)
         plt.ticklabel_format(style='sci',scilimits=(0,0),axis='y')
         plt.title(r'$ S-\omega t, \omega_0=%.2f \times 10^6 rad/s$'%(omega0*1e-6), fontsize=20)
-        plt.savefig(r'D:\transfer\trans_code\results_qd\grad\N=7_新basis_0.01步长_30mus\S_%.2f.png'%(omega0*1e-6))  # change N
+        plt.savefig(r'D:\transfer\trans_code\results_qd\grad\init6_0.01步长_cn_15mus\S_%.2f.png'%(omega0*1e-6))  # change N
         
 #    print("fidmw:", fidmw_e, fidmw_1, fidmw_2, fidmw_3, fidmw_4)
     
@@ -699,17 +783,17 @@ elif find=='2':
     l2, = plt.plot(omega0_list_, fidm_1)
     l3, = plt.plot(omega0_list_, fidm_2)
     l4, = plt.plot(omega0_list_, fidm_3)
-    l5, = plt.plot(omega0_list_, fidm_4)
-    l6, = plt.plot(omega0_list_, fidm_5)
-    l7, = plt.plot(omega0_list_, fidm_6)
-    l8, = plt.plot(omega0_list_, fidm_7)
+#    l5, = plt.plot(omega0_list_, fidm_4)
+#    l6, = plt.plot(omega0_list_, fidm_5)
+#    l7, = plt.plot(omega0_list_, fidm_6)
+#    l8, = plt.plot(omega0_list_, fidm_7)
     
     plt.rcParams['font.sans-serif'] = ['SimHei']  # Chinese character
     plt.rcParams['axes.unicode_minus'] = False
     
-#    plt.legend(handles=[l1, l2, l3, l4, ], 
-#               labels=[r'电子', r'核1', r'核2', r'核3', ], 
-#               loc='best', fontsize=16)
+    plt.legend(handles=[l1, l2, l3, l4, ], 
+               labels=[r'电子', r'核1', r'核2', r'核3', ], 
+               loc='best', fontsize=16)
 #    plt.legend(handles=[l1, l2, l3, l4, l5, ],
 #               labels=[r'电子', r'核1', r'核2', r'核3', 
 #                       r'核4', ], 
@@ -722,17 +806,17 @@ elif find=='2':
 #               labels=[r'电子', r'核1', r'核2', r'核3', 
 #                       r'核4', r'核5', r'核6', ], 
 #               loc='lower right', fontsize=16)
-    plt.legend(handles=[l1, l2, l3, l4, l5, l6, l7, l8, ], 
-               labels=[r'电子', r'核1', r'核2', r'核3', 
-                       r'核4', r'核5', r'核6', '核7', ], 
-               loc='lower right', fontsize=16)
+#    plt.legend(handles=[l1, l2, l3, l4, l5, l6, l7, l8, ], 
+#               labels=[r'电子', r'核1', r'核2', r'核3', 
+#                       r'核4', r'核5', r'核6', '核7', ], 
+#               loc='lower right', fontsize=16)
 
     plt.xlabel(r'$\omega_0 (\times 10^6 rad/s)$', fontsize=16)
     plt.ylabel(r'$F_{max}$', fontsize=16)
     plt.xticks(fontsize=14)
     plt.yticks(fontsize=14)
     plt.title(r'$F_{max} - \omega_0$', fontsize=20)
-    plt.savefig(r'D:\transfer\trans_code\results_qd\grad\N=7_新basis_0.01步长_30mus\fidmax.png')  # change N
+    plt.savefig(r'D:\transfer\trans_code\results_qd\grad\init6_0.01步长_cn_15mus\fidmax.png')  # change N
 
 
 elif find=='3':
@@ -742,4 +826,47 @@ elif find=='3':
     fidmu = fidmu(Ham.expm(), Ham_tar.expm(), np.power(2,int(params['N']+1)))
     print("fidm:", fidm)
     print("fidmu:", fidmu)
+
+
+elif find=='4':
+    omega0_list_ = [i*1e-6 for i in omega0_list]
+    fig = plt.figure(figsize=(8,6))
+    l1, = plt.plot(omega0_list_, fidm_e)
+    l2, = plt.plot(omega0_list_, fidm_1)
+    l3, = plt.plot(omega0_list_, fidm_2)
+    l4, = plt.plot(omega0_list_, fidm_3)
+#    l5, = plt.plot(omega0_list_, fidm_4)
+#    l6, = plt.plot(omega0_list_, fidm_5)
+#    l7, = plt.plot(omega0_list_, fidm_6)
+#    l8, = plt.plot(omega0_list_, fidm_7)
+    
+    plt.rcParams['font.sans-serif'] = ['SimHei']  # Chinese character
+    plt.rcParams['axes.unicode_minus'] = False
+    
+    plt.legend(handles=[l1, l2, l3, l4, ], 
+               labels=[r'电子', r'核1', r'核2', r'核3', ], 
+               loc='center left', fontsize=16)
+#    plt.legend(handles=[l1, l2, l3, l4, l5, ],
+#               labels=[r'电子', r'核1', r'核2', r'核3', 
+#                       r'核4', ], 
+#               loc='best', fontsize=16)
+#    plt.legend(handles=[l1, l2, l3, l4, l5, l6, ], 
+#               labels=[r'电子', r'核1', r'核2', r'核3', 
+#                       r'核4', r'核5', ], 
+#               loc='best', fontsize=16)
+#    plt.legend(handles=[l1, l2, l3, l4, l5, l6, l7, ], 
+#               labels=[r'电子', r'核1', r'核2', r'核3', 
+#                       r'核4', r'核5', r'核6', ], 
+#               loc='lower right', fontsize=16)
+#    plt.legend(handles=[l1, l2, l3, l4, l5, l6, l7, l8, ], 
+#               labels=[r'电子', r'核1', r'核2', r'核3', 
+#                       r'核4', r'核5', r'核6', '核7', ], 
+#               loc='lower right', fontsize=16)
+
+    plt.xlabel(r'$\omega_0 (\times 10^6 rad/s)$', fontsize=16)
+    plt.ylabel(r'$F_{max}$', fontsize=16)
+    plt.xticks(fontsize=14)
+    plt.yticks(fontsize=14)
+    plt.title(r'$F_{max} - \omega_0$', fontsize=20)
+    plt.savefig(r'D:\transfer\trans_code\results_qd\grad\grad1小_0.01步长_cn\fidmax.png')  # change N
     
