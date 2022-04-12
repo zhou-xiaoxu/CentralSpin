@@ -206,7 +206,7 @@ params = dict()
 params = {
           "N": 5,
           "ce": [0,1],
-          "omega": [2500*1e3,10000*1e3,5500*1e3,1000*1e3,5500*1e3,4000*1e3,2500*1e3,1000*1e3],
+          "omega": [2500*1e3,10000*1e3,8500*1e3,7000*1e3,5500*1e3,4000*1e3,2500*1e3,1000*1e3],
           "A": [1.20*1e6,1.18*1e6,1.16*1e6,1.14*1e6,1.12*1e6,1.10*1e6,1.08*1e6],
           "n": 1,
           "T": 30e-6,
@@ -674,13 +674,13 @@ elif find=='2':
                 fidma_4[4] = fidm_5[-1]
 #                fidma_4[5] = fidm_6[-1]
 #                fidma_4[6] = fidm_7[-1]
-#            if fidm_5[-1]>max(fidm_5[:-1]):
-#                fidmw_5 = omega0 * 1e-6
-#                fidma_5[0] = fidm_1[-1]
-#                fidma_5[1] = fidm_2[-1]
-#                fidma_5[2] = fidm_3[-1]
-#                fidma_5[3] = fidm_4[-1]
-#                fidma_5[4] = fidm_5[-1]
+            if fidm_5[-1]>max(fidm_5[:-1]):
+                fidmw_5 = omega0 * 1e-6
+                fidma_5[0] = fidm_1[-1]
+                fidma_5[1] = fidm_2[-1]
+                fidma_5[2] = fidm_3[-1]
+                fidma_5[3] = fidm_4[-1]
+                fidma_5[4] = fidm_5[-1]
 #                fidma_5[5] = fidm_6[-1]
 #                fidma_5[6] = fidm_7[-1]
 #            if fidm_6[-1]>max(fidm_6[:-1]):
